@@ -1,270 +1,117 @@
 // ============================================================
-// ChessMind Coach — Evaluation Bar Component
-// ============================================================
-//
-// The vertical bar on the side of the chess board that shows
-// who is winning. When White is better, the white portion
-// grows. When Black is better, the black portion grows.
-//
-// Features:
-//   - Smooth animation when evaluation changes
-//   - Displays numerical evaluation (centipawns or mate)
-//   - Win probability percentage overlay
-//   - Color-coded for intuitive understanding
-//   - Handles mate scores with special display
-//
-// The bar is oriented vertically:
-//   TOP    = Black's side (black fills from top)
-//   BOTTOM = White's side (white fills from bottom)
-//
+// ChessMind Coach — Minimalist Evaluation Bar
 // ============================================================
 
 "use client";
+import React from "react";
 
-import React, { useMemo } from "react";
-import {
-  formatEvaluation,
-  centipawnsToWinProbability,
-} from "@/engine/uci-parser";
-
-
-// ============================================================
-// PROPS
-// ============================================================
-
-interface EvaluationBarProps {
-  /** Evaluation in centipawns from White's perspective.
-   *  Positive = White is better, Negative = Black is better.
-   *  null if using mate score instead. */
+interface EvalBarProps {
   centipawns: number | null;
-
-  /** Mate-in-N from White's perspective.
-   *  Positive = White can force mate, Negative = Black can force mate.
-   *  null if no forced mate. */
   mate: number | null;
-
-  /** Win probability for White (0-100). If provided, shown as text.
-   *  If not provided, calculated from centipawns. */
-  winProbability?: number;
-
-  /** Height of the bar in pixels. Default: 400 */
+  winProbability: number;
   height?: number;
-
-  /** Width of the bar in pixels. Default: 32 */
   width?: number;
-
-  /** Whether the board is flipped (Black on bottom) */
   flipped?: boolean;
-
-  /** Whether the engine is currently analyzing */
   isAnalyzing?: boolean;
-
-  /** Optional additional CSS classes */
-  className?: string;
 }
-
-
-// ============================================================
-// COMPONENT
-// ============================================================
 
 export default function EvaluationBar({
   centipawns,
   mate,
   winProbability,
-  height = 400,
-  width = 32,
+  height = 560,
+  width = 24,
   flipped = false,
   isAnalyzing = false,
-  className = "",
-}: EvaluationBarProps) {
-  // ── Calculate the white portion percentage ──
-  // This determines how much of the bar is white (from bottom)
-  const whitePercentage = useMemo(() => {
-    // Mate scores: show extreme values
-    if (mate !== null && mate !== undefined) {
-      if (mate > 0) {
-        // White can force mate — almost full white
-        return 95;
-      } else {
-        // Black can force mate — almost full black
-        return 5;
-      }
-    }
+}: EvalBarProps) {
+  let fillPercentage = 50;
+  let evalText = "0.0";
+  let isWhiteAdvantage = true;
 
-    // Use provided win probability or calculate from centipawns
-    if (winProbability !== undefined) {
-      return Math.max(2, Math.min(98, winProbability));
-    }
+  if (mate !== null) {
+    fillPercentage = mate > 0 ? 100 : 0;
+    evalText = `M${Math.abs(mate)}`;
+    isWhiteAdvantage = mate > 0;
+  } else if (centipawns !== null) {
+    const cp = Math.max(-1000, Math.min(1000, centipawns));
+    fillPercentage = 50 + (cp / 20); 
+    const evalValue = cp / 100;
+    evalText = Math.abs(evalValue).toFixed(1);
+    isWhiteAdvantage = cp >= 0;
+  }
 
-    if (centipawns !== null && centipawns !== undefined) {
-      const winProb = centipawnsToWinProbability(centipawns);
-      return Math.max(2, Math.min(98, winProb));
-    }
-
-    // Default: equal position
-    return 50;
-  }, [centipawns, mate, winProbability]);
-
-  // ── Format the evaluation text ──
-  const evalText = useMemo(() => {
-    return formatEvaluation(centipawns, mate);
-  }, [centipawns, mate]);
-
-  // ── Determine which side's eval to show at the wider end ──
-  const showWhiteEval = whitePercentage >= 50;
-
-  // ── If board is flipped, we need to flip the bar too ──
-  const displayPercentage = flipped ? 100 - whitePercentage : whitePercentage;
+  const whiteHeight = `${fillPercentage}%`;
+  const blackHeight = `${100 - fillPercentage}%`;
 
   return (
     <div
+      style={{ height: height ? `${height}px` : '100%', width: `${width}px` }}
       className={`
-        relative flex flex-col overflow-hidden rounded-sm
-        ${isAnalyzing ? "animate-pulse-glow" : ""}
-        ${className}
+        relative overflow-hidden flex flex-col bg-[#312e2b] rounded-sm
+        ${flipped ? "flex-col-reverse" : ""}
+        ${isAnalyzing ? "opacity-80" : "opacity-100"}
       `}
-      style={{ height: `${height}px`, width: `${width}px` }}
-      title={`Evaluation: ${evalText}`}
     >
-      {/* ── Black portion (top) ── */}
+      {/* Black's section */}
       <div
-        className="bg-zinc-800 eval-bar-transition relative"
-        style={{ height: `${100 - displayPercentage}%` }}
+        className="w-full bg-[#403d39] transition-all duration-300 flex items-start justify-center pt-1"
+        style={{ height: blackHeight }}
       >
-        {/* Show eval text on black's side if Black is better */}
-        {!showWhiteEval && (
-          <div className="absolute bottom-1 left-0 right-0 flex justify-center">
-            <span className="text-white text-xs font-bold px-0.5">
-              {evalText}
-            </span>
-          </div>
+        {!isWhiteAdvantage && (
+          <span className="text-[10px] font-bold text-zinc-300 select-none">
+            {evalText}
+          </span>
         )}
       </div>
 
-      {/* ── Divider line ── */}
-      <div className="h-px bg-zinc-500 w-full shrink-0" />
-
-      {/* ── White portion (bottom) ── */}
+      {/* White's section */}
       <div
-        className="bg-zinc-100 eval-bar-transition relative grow"
-        style={{ height: `${displayPercentage}%` }}
+        className="w-full bg-white transition-all duration-300 flex items-end justify-center pb-1"
+        style={{ height: whiteHeight }}
       >
-        {/* Show eval text on white's side if White is better */}
-        {showWhiteEval && (
-          <div className="absolute top-1 left-0 right-0 flex justify-center">
-            <span className="text-zinc-800 text-xs font-bold px-0.5">
-              {evalText}
-            </span>
-          </div>
+        {isWhiteAdvantage && (
+          <span className="text-[10px] font-bold text-black select-none">
+            {evalText}
+          </span>
         )}
       </div>
+      
+      {/* Center notch */}
+      <div className="absolute top-1/2 left-0 w-full h-px bg-red-500/50 z-20" />
     </div>
   );
 }
 
-
-// ============================================================
-// HORIZONTAL EVALUATION BAR (for mobile / compact layouts)
-// ============================================================
-
+// ── Horizontal Version for Mobile ──
 export function EvaluationBarHorizontal({
   centipawns,
   mate,
   winProbability,
-  height = 24,
+  height = 8,
   isAnalyzing = false,
-  className = "",
-}: Omit<EvaluationBarProps, "width" | "flipped"> & { height?: number }) {
-  const whitePercentage = useMemo(() => {
-    if (mate !== null && mate !== undefined) {
-      return mate > 0 ? 95 : 5;
-    }
-    if (winProbability !== undefined) {
-      return Math.max(2, Math.min(98, winProbability));
-    }
-    if (centipawns !== null && centipawns !== undefined) {
-      return Math.max(2, Math.min(98, centipawnsToWinProbability(centipawns)));
-    }
-    return 50;
-  }, [centipawns, mate, winProbability]);
+}: EvalBarProps) {
+  let fillPercentage = 50;
 
-  const evalText = formatEvaluation(centipawns, mate);
+  if (mate !== null) {
+    fillPercentage = mate > 0 ? 100 : 0;
+  } else if (centipawns !== null) {
+    const cp = Math.max(-1000, Math.min(1000, centipawns));
+    fillPercentage = 50 + (cp / 20);
+  }
 
   return (
     <div
-      className={`
-        relative flex overflow-hidden rounded-sm w-full
-        ${isAnalyzing ? "animate-pulse-glow" : ""}
-        ${className}
-      `}
       style={{ height: `${height}px` }}
-      title={`Evaluation: ${evalText}`}
-    >
-      {/* White portion (left) */}
-      <div
-        className="bg-zinc-100 eval-bar-transition relative"
-        style={{ width: `${whitePercentage}%` }}
-      >
-        {whitePercentage >= 50 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-zinc-800 text-xs font-bold">
-              {evalText}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="w-px bg-zinc-500 shrink-0" />
-
-      {/* Black portion (right) */}
-      <div
-        className="bg-zinc-800 eval-bar-transition relative grow"
-      >
-        {whitePercentage < 50 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">
-              {evalText}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-// ============================================================
-// MINI EVAL DISPLAY (just the number, no bar)
-// ============================================================
-
-export function EvalDisplay({
-  centipawns,
-  mate,
-  className = "",
-}: {
-  centipawns: number | null;
-  mate: number | null;
-  className?: string;
-}) {
-  const evalText = formatEvaluation(centipawns, mate);
-  const isPositive = (centipawns !== null && centipawns > 0) ||
-                     (mate !== null && mate > 0);
-  const isNegative = (centipawns !== null && centipawns < 0) ||
-                     (mate !== null && mate < 0);
-
-  return (
-    <span
       className={`
-        font-mono font-bold text-sm
-        ${isPositive ? "text-white" : ""}
-        ${isNegative ? "text-zinc-400" : ""}
-        ${!isPositive && !isNegative ? "text-zinc-300" : ""}
-        ${className}
+        w-full relative overflow-hidden flex bg-[#403d39] rounded-sm
+        ${isAnalyzing ? "opacity-80" : "opacity-100"}
       `}
     >
-      {evalText}
-    </span>
+      <div
+        className="h-full bg-white transition-all duration-300"
+        style={{ width: `${fillPercentage}%` }}
+      />
+      <div className="absolute left-1/2 top-0 h-full w-px bg-red-500/50 z-20" />
+    </div>
   );
 }

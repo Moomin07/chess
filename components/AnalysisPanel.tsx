@@ -1,64 +1,19 @@
 // ============================================================
-// ChessMind Coach — Analysis Panel Component
-// ============================================================
-//
-// This is the main coaching display — the panel that shows
-// the 6-layer natural language analysis for each move.
-//
-// Layout:
-//   ┌──────────────────────────────────────┐
-//   │  [Badge] Brilliant!!                  │
-//   │                                       │
-//   │  📝 What This Move Does               │
-//   │  Knight captures the bishop on d5...  │
-//   │                                       │
-//   │  📊 Evaluation                        │
-//   │  This is the engine's top choice...   │
-//   │                                       │
-//   │  🔮 What Happens Next                 │
-//   │  1...Nxd5 2.exd5 Qxd5 3.Nc3...      │
-//   │                                       │
-//   │  💡 What You Should Have Played       │
-//   │  Instead of Bg5, play Nd5! which...   │
-//   │                                       │
-//   │  🗺️ Strategic Context                 │
-//   │  We are in the Sicilian middlegame... │
-//   │                                       │
-//   │  🎯 Coaching Tip                      │
-//   │  Before capturing, always check...    │
-//   └──────────────────────────────────────┘
-//
+// ChessMind Coach — Minimalist Analysis Panel
 // ============================================================
 
 "use client";
 
 import React, { useState } from "react";
-import { AnalysisResult, MoveClassification } from "@/lib/types";
+import { AnalysisResult } from "@/lib/types";
 import ClassificationBadge from "./ClassificationBadge";
 
-
-// ============================================================
-// PROPS
-// ============================================================
-
 interface AnalysisPanelProps {
-  /** The complete analysis result for the current move */
   analysis: AnalysisResult | null;
-
-  /** The move in SAN notation (e.g., "Nf3") */
   moveSan: string;
-
-  /** Whether analysis is currently in progress */
   isAnalyzing: boolean;
-
-  /** Optional additional CSS classes */
   className?: string;
 }
-
-
-// ============================================================
-// COMPONENT
-// ============================================================
 
 export default function AnalysisPanel({
   analysis,
@@ -66,7 +21,6 @@ export default function AnalysisPanel({
   isAnalyzing,
   className = "",
 }: AnalysisPanelProps) {
-  // Track which sections are expanded/collapsed
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["descriptive", "evaluative", "coachingTip"])
   );
@@ -83,140 +37,85 @@ export default function AnalysisPanel({
     });
   };
 
-  // ── Analyzing state ──
   if (isAnalyzing) {
     return (
-      <div className={`p-4 ${className}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          <div>
-            <p className="text-sm text-zinc-300">Analyzing {moveSan}...</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Evaluating position and generating coaching feedback
-            </p>
-          </div>
-        </div>
+      <div className={`p-6 h-full flex flex-col items-center justify-center text-center ${className}`}>
+        <div className="w-8 h-8 border-4 border-[#3c3934] border-t-[#81b64c] rounded-full animate-spin mb-4" />
+        <p className="text-lg font-bold text-white">Analyzing {moveSan}</p>
       </div>
     );
   }
 
-  // ── No analysis available ──
   if (!analysis) {
     return (
-      <div className={`p-4 text-center text-zinc-500 ${className}`}>
-        <p className="text-sm">Select a move to see analysis</p>
+      <div className={`p-8 h-full flex flex-col items-center justify-center text-center ${className}`}>
+        <span className="text-4xl opacity-30 mb-2">♟</span>
+        <p className="text-sm font-bold text-zinc-500">Awaiting Move</p>
       </div>
     );
   }
 
-  // ── Full analysis display ──
   const sections = [
-    {
-      key: "descriptive",
-      icon: "📝",
-      title: "What This Move Does",
-      content: analysis.layers.descriptive,
-    },
-    {
-      key: "evaluative",
-      icon: "📊",
-      title: "Evaluation",
-      content: analysis.layers.evaluative,
-    },
-    {
-      key: "consequential",
-      icon: "🔮",
-      title: "What Happens Next",
-      content: analysis.layers.consequential,
-    },
-    {
-      key: "corrective",
-      icon: "💡",
-      title: "What You Should Have Played",
-      content: analysis.layers.corrective,
-      // Only show if there's corrective content
-      hidden: !analysis.layers.corrective || analysis.layers.corrective.length === 0,
-    },
-    {
-      key: "strategic",
-      icon: "🗺️",
-      title: "Strategic Context",
-      content: analysis.layers.strategic,
-    },
-    {
-      key: "coachingTip",
-      icon: "🎯",
-      title: "Coaching Tip",
-      content: analysis.layers.coachingTip,
-    },
+    { key: "descriptive", icon: "📝", title: "The Move", content: analysis.layers.descriptive },
+    { key: "evaluative", icon: "📊", title: "Evaluation", content: analysis.layers.evaluative },
+    { key: "consequential", icon: "🔮", title: "Continuation", content: analysis.layers.consequential },
+    { key: "corrective", icon: "💡", title: "Alternatives", content: analysis.layers.corrective, hidden: !analysis.layers.corrective },
+    { key: "strategic", icon: "🗺️", title: "Strategy", content: analysis.layers.strategic },
+    { key: "coachingTip", icon: "🎯", title: "Advice", content: analysis.layers.coachingTip },
   ];
 
   return (
-    <div className={`p-3 space-y-3 ${className}`}>
-      {/* ── Header: Classification badge + move name ── */}
-      <div className="flex items-center gap-3 pb-2 border-b border-zinc-700/50">
-        <ClassificationBadge
-          classification={analysis.classification}
-          size="lg"
-          showLabel={true}
-        />
-        <span className="font-mono text-lg text-white font-bold">
-          {moveSan}
-        </span>
-        {analysis.centipawnLoss > 0 && (
-          <span className="text-xs text-zinc-400 ml-auto">
-            -{analysis.centipawnLoss}cp
+    <div className={`p-4 space-y-3 ${className}`}>
+      {/* ── Header ── */}
+      <div className="flex items-center gap-3 pb-4 border-b border-white/5">
+        <ClassificationBadge classification={analysis.classification} size="lg" showLabel={false} />
+        <div className="flex flex-col">
+          <span className="font-bold text-2xl text-white">{moveSan}</span>
+          <span className="text-xs font-bold text-zinc-400 uppercase">
+            {analysis.classification}
           </span>
+        </div>
+        {analysis.centipawnLoss > 0 && (
+          <div className="ml-auto text-right">
+            <span className="block text-lg font-bold text-red-400">-{analysis.centipawnLoss}</span>
+            <span className="block text-[10px] uppercase font-bold text-zinc-500">CP Loss</span>
+          </div>
         )}
       </div>
 
-      {/* ── Analysis sections ── */}
-      {sections.map((section) => {
-        if (section.hidden) return null;
+      {/* ── Accordion Sections ── */}
+      <div className="space-y-2">
+        {sections.map((section) => {
+          if (section.hidden) return null;
+          const isExpanded = expandedSections.has(section.key);
 
-        const isExpanded = expandedSections.has(section.key);
+          return (
+            <div key={section.key} className="bg-[#1f1e1b] rounded border border-white/5">
+              <button
+                onClick={() => toggleSection(section.key)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#2a2825] transition-colors rounded"
+              >
+                <span className="text-sm">{section.icon}</span>
+                <span className="text-xs font-bold text-zinc-300 uppercase grow">{section.title}</span>
+                <span className="text-zinc-500 text-xs font-bold">{isExpanded ? "−" : "+"}</span>
+              </button>
+              
+              {isExpanded && (
+                <div className="px-3 pb-3 pt-1 border-t border-white/5 mt-1">
+                  <p className="text-sm text-zinc-300 font-medium whitespace-pre-line">
+                    {section.content}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-        return (
-          <div
-            key={section.key}
-            className="rounded-lg bg-zinc-800/50 overflow-hidden"
-          >
-            {/* Section header (clickable to expand/collapse) */}
-            <button
-              onClick={() => toggleSection(section.key)}
-              className="w-full flex items-center gap-2 px-3 py-2 
-                         hover:bg-zinc-700/30 transition-colors text-left"
-            >
-              <span className="text-base">{section.icon}</span>
-              <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wide grow">
-                {section.title}
-              </span>
-              <span className="text-zinc-500 text-xs">
-                {isExpanded ? "▼" : "▶"}
-              </span>
-            </button>
-
-            {/* Section content */}
-            {isExpanded && (
-              <div className="px-3 pb-3">
-                <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">
-                  {section.content}
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* ── Analysis metadata ── */}
-      <div className="flex items-center justify-between text-xs text-zinc-600 pt-1">
-        <span>
-          Depth: {analysis.evalAfter.depth} | 
-          Nodes: {(analysis.evalAfter.nodes / 1000).toFixed(0)}k
-        </span>
-        <span>
-          {analysis.analysisTimeMs.toFixed(0)}ms
-        </span>
+      {/* ── Metadata ── */}
+      <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-600 pt-2 mt-4">
+        <span>Depth: {analysis.evalAfter.depth} • Nodes: {(analysis.evalAfter.nodes / 1000).toFixed(0)}k</span>
+        <span>{analysis.analysisTimeMs.toFixed(0)}ms</span>
       </div>
     </div>
   );

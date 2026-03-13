@@ -1,5 +1,5 @@
 // ============================================================
-// ChessMind Coach — Game Page (Complete)
+// ChessMind Coach — Minimalist Game Page 
 // ============================================================
 
 "use client";
@@ -14,11 +14,53 @@ import {
 } from "@/lib/types";
 
 import ChessBoard from "@/components/ChessBoard";
-import EvaluationBar from "@/components/EvaluationBar";
-import { EvaluationBarHorizontal } from "@/components/EvaluationBar";
+import EvaluationBar, { EvaluationBarHorizontal } from "@/components/EvaluationBar";
 import MoveList from "@/components/MoveList";
 import AnalysisPanel from "@/components/AnalysisPanel";
 
+// ============================================================
+// HELPERS FOR MATERIAL ADVANTAGE
+// ============================================================
+
+const PIECE_SYMBOLS: Record<string, string> = {
+  p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", // Black pieces
+  P: "♙", N: "♘", B: "♗", R: "♖", Q: "♕"  // White pieces
+};
+
+function getMaterialState(fen: string) {
+  const pieceValues: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, P: 1, N: 3, B: 3, R: 5, Q: 9 };
+  const start: Record<string, number> = { p: 8, n: 2, b: 2, r: 2, q: 1, P: 8, N: 2, B: 2, R: 2, Q: 1 };
+  const current: Record<string, number> = { p: 0, n: 0, b: 0, r: 0, q: 0, P: 0, N: 0, B: 0, R: 0, Q: 0 };
+  
+  const board = fen.split(" ")[0];
+  let wScore = 0; let bScore = 0;
+  
+  for (const char of board) {
+    if (current[char] !== undefined) current[char]++;
+    if (char >= 'A' && char <= 'Z' && pieceValues[char]) wScore += pieceValues[char];
+    if (char >= 'a' && char <= 'z' && pieceValues[char]) bScore += pieceValues[char];
+  }
+  
+  const whiteCaptured: string[] = []; 
+  const blackCaptured: string[] = []; 
+  const order = ['q', 'r', 'b', 'n', 'p']; 
+  
+  for (const p of order) {
+    const blackTaken = start[p] - current[p];
+    for (let i = 0; i < blackTaken; i++) whiteCaptured.push(p);
+    
+    const P = p.toUpperCase();
+    const whiteTaken = start[P] - current[P];
+    for (let i = 0; i < whiteTaken; i++) blackCaptured.push(P);
+  }
+  
+  return {
+    whiteCaptured,
+    blackCaptured,
+    whiteAdvantage: Math.max(0, wScore - bScore),
+    blackAdvantage: Math.max(0, bScore - wScore),
+  };
+}
 
 // ============================================================
 // MAIN PAGE
@@ -27,15 +69,14 @@ import AnalysisPanel from "@/components/AnalysisPanel";
 export default function GamePage() {
   const isGameActive = useGameStore((s) => s.isGameActive);
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="h-[100dvh] w-full overflow-hidden flex flex-col">
       {isGameActive ? <GameView /> : <SetupView />}
     </div>
   );
 }
 
-
 // ============================================================
-// SETUP VIEW
+// SETUP VIEW (Clean & Flat with Checkerboard BG)
 // ============================================================
 
 function SetupView() {
@@ -60,130 +101,91 @@ function SetupView() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-lg bg-zinc-900 rounded-2xl p-8 shadow-2xl border border-zinc-800">
-        <h1 className="text-3xl font-bold text-center text-white mb-2">
-          ♟ ChessMind Coach
-        </h1>
-        <p className="text-center text-zinc-400 mb-8">
-          Play against AI and improve with every move
-        </p>
-
-        {/* Engine Status */}
-        <div className="mb-6">
-          {engineError ? (
-            <div className="bg-red-500/10 text-red-400 text-sm rounded-lg p-3 text-center">
-              ❌ Engine Error: {engineError}
-            </div>
-          ) : !isEngineReady ? (
-            <div className="bg-blue-500/10 text-blue-400 text-sm rounded-lg p-3 text-center flex items-center justify-center gap-2">
-              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-              Loading chess engine...
-            </div>
-          ) : (
-            <div className="bg-green-500/10 text-green-400 text-sm rounded-lg p-3 text-center">
-              ✅ Engine ready
-            </div>
-          )}
+    // FIXED: Added checkerboard-bg class strictly to this container
+    <div className="flex-1 flex items-center justify-center p-4 checkerboard-bg">
+      <div className="w-full max-w-md surface-panel p-6 sm:p-8">
+        
+        <div className="flex justify-center mb-6">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+            <span className="text-[#81b64c]">♟</span> ChessMind
+          </h1>
         </div>
 
-        {/* Color Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-zinc-300 mb-3">Play as</label>
-          <div className="flex gap-3">
+          {engineError ? (
+            <div className="bg-red-900/30 text-red-400 text-sm rounded px-3 py-2 text-center font-medium">
+              Engine Error: {engineError}
+            </div>
+          ) : !isEngineReady ? (
+            <div className="bg-zinc-800 text-zinc-400 text-sm rounded px-3 py-2 text-center flex items-center justify-center gap-2 font-medium">
+              <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+              Loading Engine...
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-zinc-400 mb-2">I want to play as</label>
+          <div className="flex gap-2">
             <button
               onClick={() => setSelectedColor("white")}
-              className={`flex-1 py-3 rounded-xl font-semibold text-lg transition-all
+              className={`flex-1 py-3 rounded font-bold transition-colors border-2
                 ${selectedColor === "white"
-                  ? "bg-white text-zinc-900 shadow-lg shadow-white/20"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-white text-black border-white"
+                  : "bg-[#3c3934] text-zinc-300 border-transparent hover:bg-[#4b4842]"
                 }`}
             >
-              ♔ White
+              White
             </button>
             <button
               onClick={() => setSelectedColor("black")}
-              className={`flex-1 py-3 rounded-xl font-semibold text-lg transition-all
+              className={`flex-1 py-3 rounded font-bold transition-colors border-2
                 ${selectedColor === "black"
-                  ? "bg-zinc-700 text-white shadow-lg shadow-zinc-600/30 ring-2 ring-zinc-500"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-[#1f1e1b] text-white border-zinc-600"
+                  : "bg-[#3c3934] text-zinc-300 border-transparent hover:bg-[#4b4842]"
                 }`}
             >
-              ♚ Black
+              Black
             </button>
           </div>
         </div>
 
-        {/* Bot Difficulty */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-zinc-300 mb-1">Opponent Difficulty</label>
-          <p className="text-lg font-bold text-white">
-            {selectedBot.name}
-            <span className="text-sm font-normal text-zinc-400 ml-2">~{selectedBot.elo} Elo</span>
-          </p>
-          <p className="text-xs text-zinc-500 mb-3">{selectedBot.description}</p>
-          <input
-            type="range"
-            min={0}
-            max={BOT_LEVELS.length - 1}
-            value={selectedBotIndex}
-            onChange={(e) => setSelectedBotIndex(parseInt(e.target.value))}
-            className="w-full h-2 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-blue-500"
-          />
-          <div className="flex justify-between text-xs text-zinc-600 mt-1">
-            <span>Beginner (400)</span>
-            <span>Full Engine (3500)</span>
-          </div>
-        </div>
-
-        {/* Coaching Level */}
         <div className="mb-8">
-          <label className="block text-sm font-semibold text-zinc-300 mb-3">Coaching Style</label>
-          <div className="space-y-2">
-            {Object.values(CoachingLevel).map((level) => {
-              const display = COACHING_LEVEL_DISPLAY[level];
-              return (
-                <button
-                  key={level}
-                  onClick={() => setSelectedCoaching(level)}
-                  className={`w-full text-left px-4 py-3 rounded-xl transition-all
-                    ${selectedCoaching === level
-                      ? "bg-blue-500/20 ring-2 ring-blue-500 text-white"
-                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                    }`}
-                >
-                  <span className="font-semibold text-sm">{display.label}</span>
-                  <span className="block text-xs text-zinc-500 mt-0.5">{display.description}</span>
-                </button>
-              );
-            })}
+          <label className="block text-sm font-bold text-zinc-400 mb-2">Opponent</label>
+          <div className="bg-[#1f1e1b] p-4 rounded border border-white/5">
+            <div className="flex justify-between items-center mb-1">
+              <span className="font-bold text-white">{selectedBot.name}</span>
+              <span className="text-sm text-[#81b64c] font-bold">{selectedBot.elo} Elo</span>
+            </div>
+            <p className="text-xs text-zinc-500 mb-4">{selectedBot.description}</p>
+            <input
+              type="range"
+              min={0}
+              max={BOT_LEVELS.length - 1}
+              value={selectedBotIndex}
+              onChange={(e) => setSelectedBotIndex(parseInt(e.target.value))}
+              className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-[#81b64c]"
+            />
           </div>
         </div>
 
-        {/* Start Button */}
         <button
           onClick={handleStart}
           disabled={!isEngineReady}
-          className={`w-full py-4 rounded-xl font-bold text-lg transition-all
-            ${isEngineReady
-              ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-600/30 active:scale-95"
-              : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
-            }`}
+          className="w-full py-4 text-xl action-button flex justify-center items-center"
         >
-          {isEngineReady ? "Start Game" : "Loading Engine..."}
+          Play
         </button>
       </div>
     </div>
   );
 }
 
-
 // ============================================================
-// GAME VIEW
+// GAME VIEW (Split Screen Fixed Layout)
 // ============================================================
 
 function GameView() {
-  // ── State ──
   const fen = useGameStore((s) => s.fen);
   const moves = useGameStore((s) => s.moves);
   const playerColor = useGameStore((s) => s.playerColor);
@@ -195,10 +197,8 @@ function GameView() {
   const viewingMoveIndex = useGameStore((s) => s.viewingMoveIndex);
   const botLevel = useGameStore((s) => s.botLevel);
   const evalHistory = useGameStore((s) => s.evalHistory);
-  const currentOpening = useGameStore((s) => s.currentOpening);
   const currentHint = useGameStore((s) => s.currentHint);
 
-  // ── Actions ──
   const makePlayerMove = useGameStore((s) => s.makePlayerMove);
   const goToMove = useGameStore((s) => s.goToMove);
   const goForward = useGameStore((s) => s.goForward);
@@ -211,12 +211,10 @@ function GameView() {
   const reset = useGameStore((s) => s.reset);
   const generateHint = useGameStore((s) => s.generateHint);
 
-  // ── Derived state ──
   const displayFen = viewingMoveIndex === -1 ? fen : getViewingFen();
   const isViewingHistory = viewingMoveIndex !== -1;
   const canInteract = !isGameOver && isPlayerTurn && !isBotThinking && !isViewingHistory && !isAnalyzing;
 
-  // ── Last move highlighting ──
   const lastMove = useMemo((): [string, string] | null => {
     const relevantIndex = viewingMoveIndex === -1 ? moves.length - 1 : viewingMoveIndex;
     const move = moves[relevantIndex];
@@ -224,13 +222,11 @@ function GameView() {
     return [move.uci.substring(0, 2), move.uci.substring(2, 4)];
   }, [moves, viewingMoveIndex]);
 
-  // ── Current move's analysis ──
   const currentAnalysis = useMemo(() => {
     const relevantIndex = viewingMoveIndex === -1 ? moves.length - 1 : viewingMoveIndex;
     return moves[relevantIndex] || null;
   }, [moves, viewingMoveIndex]);
 
-  // ── Latest evaluation for the eval bar ──
   const latestEval = useMemo(() => {
     if (evalHistory.length === 0) return { cp: 0, mate: null, winProb: 50 };
     const latest = evalHistory[evalHistory.length - 1];
@@ -241,128 +237,148 @@ function GameView() {
     };
   }, [evalHistory]);
 
-  // ── Handle move ──
-  const handleMove = useCallback(
-    (from: string, to: string, promotion?: string) => {
-      makePlayerMove(from, to, promotion);
-    },
-    [makePlayerMove]
-  );
+  const material = useMemo(() => getMaterialState(displayFen), [displayFen]);
+  const isPlayerWhite = playerColor === "white";
 
-  // ── Status text ──
-  const statusText = useMemo(() => {
-    if (isGameOver) return "Game Over";
-    if (isBotThinking) return "Bot is thinking...";
-    if (isAnalyzing) return "Analyzing move...";
-    if (isPlayerTurn) return "Your turn";
-    return "Waiting...";
-  }, [isGameOver, isBotThinking, isAnalyzing, isPlayerTurn]);
+  const topPlayerName = isPlayerWhite ? botLevel.name : "You";
+  const bottomPlayerName = isPlayerWhite ? "You" : botLevel.name;
+  
+  const topCaptured = isPlayerWhite ? material.blackCaptured : material.whiteCaptured;
+  const bottomCaptured = isPlayerWhite ? material.whiteCaptured : material.blackCaptured;
+  
+  const topAdvantage = isPlayerWhite ? material.blackAdvantage : material.whiteAdvantage;
+  const bottomAdvantage = isPlayerWhite ? material.whiteAdvantage : material.blackAdvantage;
+
+  const handleMove = useCallback((from: string, to: string, promotion?: string) => {
+    makePlayerMove(from, to, promotion);
+  }, [makePlayerMove]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex-1 flex flex-col h-full">
       {/* ── Top Bar ── */}
-      <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-2 flex items-center justify-between">
+      <div className="bg-[#262421] px-4 py-3 flex items-center justify-between shrink-0 shadow-sm z-20 border-b border-[#1f1e1b]">
+        <span className="text-xl font-bold text-white flex items-center gap-2">
+          <span className="text-[#81b64c]">♟</span> ChessMind
+        </span>
         <div className="flex items-center gap-3">
-          <span className="text-lg font-bold text-white">♟ ChessMind</span>
-          {currentOpening && (
-            <span className="text-xs text-zinc-400 hidden sm:inline">{currentOpening}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-zinc-500">vs {botLevel.name} (~{botLevel.elo})</span>
           {(isBotThinking || isAnalyzing) && (
-            <span className="text-xs text-yellow-400 flex items-center gap-1">
-              <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-              {statusText}
-            </span>
+            <div className="flex items-center gap-2 text-xs font-bold text-zinc-400">
+              <div className="w-3 h-3 border-2 border-zinc-500 border-t-zinc-300 rounded-full animate-spin" />
+              {isBotThinking ? "Bot is thinking..." : "Analyzing..."}
+            </div>
           )}
         </div>
       </div>
 
-      {/* ── Main Content ── */}
-      <div className="grow flex flex-col lg:flex-row items-start justify-center gap-4 p-4">
-        {/* ── Eval Bar (desktop) ── */}
-        <div className="hidden lg:block">
-          <EvaluationBar
-            centipawns={latestEval.cp}
-            mate={latestEval.mate}
-            winProbability={latestEval.winProb}
-            height={560}
-            width={32}
-            flipped={playerColor === "black"}
-            isAnalyzing={isAnalyzing}
-          />
-        </div>
-
-        {/* ── Center: Board + Controls ── */}
-        <div className="flex flex-col items-center w-full max-w-[480px]">
-          {/* Opponent name */}
-          <div className="w-full flex items-center justify-between mb-2 px-1">
-            <span className="text-sm text-zinc-400">
-              {playerColor === "white" ? `♚ ${botLevel.name}` : "♔ You"}
-            </span>
-            {isViewingHistory && (
-              <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded">
-                Viewing move {viewingMoveIndex + 1}
-              </span>
-            )}
-          </div>
-
-          {/* Chess Board */}
-          <ChessBoard
-            fen={displayFen}
-            orientation={playerColor}
-            interactive={canInteract}
-            onMove={handleMove}
-            getLegalMoves={getLegalMovesForSquare}
-            lastMove={lastMove}
-          />
-
-          {/* Player name */}
-          <div className="w-full flex items-center justify-between mt-2 px-1">
-            <span className="text-sm text-zinc-300 font-semibold">
-              {playerColor === "white" ? "♔ You" : `♚ ${botLevel.name}`}
-            </span>
-            <span className="text-xs text-zinc-500">
-              {isPlayerTurn && !isGameOver && !isAnalyzing ? "Your turn" : ""}
-            </span>
-          </div>
-
-          {/* Eval Bar (mobile) */}
-          <div className="lg:hidden mt-2 w-full">
-            <EvaluationBarHorizontal
+      {/* ── Main Split Container ── */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10 p-2 lg:p-6 gap-4 lg:gap-6 justify-center">
+        
+        {/* ── LEFT SIDE: Evaluation Bar + Board ── */}
+        <div className="shrink-0 flex flex-row items-start justify-center relative z-20 w-full lg:w-auto lg:overflow-y-auto lg:pb-8">
+          
+          <div className="hidden lg:flex shrink-0 mr-4 py-[28px]">
+            <EvaluationBar
               centipawns={latestEval.cp}
               mate={latestEval.mate}
               winProbability={latestEval.winProb}
-              height={20}
+              height={undefined} 
+              width={24}
+              flipped={playerColor === "black"}
               isAnalyzing={isAnalyzing}
             />
           </div>
 
-          {/* ── Hint Panel ── */}
+          <div className="flex flex-col w-full max-w-[480px] lg:max-w-[min(480px,calc(100vh-220px))]">
+            
+            {/* Top Player (Opponent) */}
+            <div className="flex justify-between items-end mb-1 px-1 h-7">
+              <div className="flex items-center gap-2">
+                <div className="bg-[#1f1e1b] rounded text-xs px-1.5 py-0.5 font-bold text-zinc-400">Bot</div>
+                <span className="text-sm font-bold text-white truncate max-w-[120px] lg:max-w-full">{topPlayerName}</span>
+                <span className="text-sm text-zinc-500 font-medium">({botLevel.elo})</span>
+              </div>
+            </div>
+            
+            {/* Top Player Material */}
+            <div className="flex items-center px-1 mb-2 h-5">
+              <div className="flex text-lg leading-none tracking-tight text-zinc-400">
+                {topCaptured.map((p, i) => <span key={i}>{PIECE_SYMBOLS[p]}</span>)}
+              </div>
+              {topAdvantage > 0 && (
+                <span className="ml-2 text-xs font-bold text-zinc-400">+{topAdvantage}</span>
+              )}
+            </div>
+
+            {/* Mobile Eval Bar */}
+            <div className="lg:hidden mb-2">
+               <EvaluationBarHorizontal
+                  centipawns={latestEval.cp}
+                  mate={latestEval.mate}
+                  winProbability={latestEval.winProb}
+                  height={8}
+                  isAnalyzing={isAnalyzing}
+                />
+            </div>
+
+            {/* The Board */}
+            <div className="rounded overflow-hidden w-full">
+              <ChessBoard
+                fen={displayFen}
+                orientation={playerColor}
+                interactive={canInteract}
+                onMove={handleMove}
+                getLegalMoves={getLegalMovesForSquare}
+                lastMove={lastMove}
+              />
+            </div>
+
+            {/* Bottom Player Material */}
+            <div className="flex items-center px-1 mt-2 h-5">
+              <div className="flex text-lg leading-none tracking-tight text-zinc-400">
+                {bottomCaptured.map((p, i) => <span key={i}>{PIECE_SYMBOLS[p]}</span>)}
+              </div>
+              {bottomAdvantage > 0 && (
+                <span className="ml-2 text-xs font-bold text-zinc-400">+{bottomAdvantage}</span>
+              )}
+            </div>
+
+            {/* Bottom Player (You) */}
+            <div className="flex justify-between items-start mt-1 px-1 h-7">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">{bottomPlayerName}</span>
+              </div>
+              <span className="text-xs font-bold text-[#81b64c]">
+                {isPlayerTurn && !isGameOver && !isAnalyzing && !isViewingHistory ? "Your Turn" : ""}
+              </span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-1 mt-2">
+              <NavButton onClick={goToStart} label="⏮" />
+              <NavButton onClick={goBack} label="◀" />
+              <NavButton onClick={goForward} label="▶" />
+              <NavButton onClick={goToEnd} label="⏭" />
+              <div className="w-px h-6 bg-white/10 mx-2" />
+              {!isGameOver && <NavButton onClick={resign} label="🏳️" />}
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT SIDE: Analysis & Hints (SCROLLABLE ZONE) ── */}
+        <div className="flex-1 overflow-y-auto w-full lg:max-w-[400px] scroll-smooth z-10 flex flex-col gap-4 pb-10">
+          
+          {/* Hint Area */}
           {isPlayerTurn && !isGameOver && !isAnalyzing && (
-            // FIXED: Added min-h-[140px] to prevent layout jumping
-            <div className="w-full mt-3 min-h-[140px]">
+            <div className="surface-panel p-4 shrink-0">
               {currentHint ? (
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 h-full">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
-                      💡 Hint
-                    </span>
-                    <button
-                      onClick={generateHint}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                    >
-                      Refresh
-                    </button>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-[#81b64c] uppercase">Coach Hint</span>
                   </div>
                   {currentHint.isLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-blue-300">
-                      <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                      Analyzing position...
-                    </div>
+                    <div className="text-sm text-zinc-400 font-medium">Analyzing position...</div>
                   ) : (
-                    <p className="text-sm text-blue-200 leading-relaxed">
+                    <p className="text-sm text-zinc-300 font-medium leading-relaxed">
                       {currentHint.explanation}
                     </p>
                   )}
@@ -370,9 +386,7 @@ function GameView() {
               ) : (
                 <button
                   onClick={generateHint}
-                  className="w-full py-2 rounded-xl text-sm font-medium
-                             bg-blue-500/10 hover:bg-blue-500/20 text-blue-400
-                             border border-blue-500/20 transition-colors"
+                  className="w-full py-2 rounded font-bold surface-button"
                 >
                   💡 Show Hint
                 </button>
@@ -380,98 +394,56 @@ function GameView() {
             </div>
           )}
 
-          {/* Navigation Controls */}
-          <div className="flex items-center gap-2 mt-3 w-full justify-center">
-            <NavButton onClick={goToStart} label="⏮" title="Go to start" />
-            <NavButton onClick={goBack} label="◀" title="Previous move" />
-            <NavButton onClick={goForward} label="▶" title="Next move" />
-            <NavButton onClick={goToEnd} label="⏭" title="Go to latest" />
-            <div className="w-px h-6 bg-zinc-700 mx-1" />
-            {!isGameOver && (
-              <NavButton onClick={resign} label="🏳️" title="Resign" danger />
-            )}
-            {isGameOver && (
-              <button
-                onClick={reset}
-                className="px-4 py-1.5 rounded-lg text-sm font-semibold
-                           bg-green-600 hover:bg-green-500 text-white transition-colors"
-              >
-                New Game
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Right Panel: Moves + Analysis ── */}
-        <div className="w-full lg:w-80 flex flex-col bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden lg:h-[600px] mt-4 lg:mt-0">
           {/* Move List */}
-          <div className="border-b border-zinc-800">
-            <div className="px-3 py-2 bg-zinc-800/50">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
-                Moves
-              </span>
+          <div className="surface-panel overflow-hidden flex flex-col max-h-[250px] shrink-0">
+            <div className="bg-[#1f1e1b] px-3 py-2 border-b border-[#312e2b]">
+              <span className="text-xs font-bold text-zinc-400 uppercase">Moves</span>
             </div>
             <MoveList
               moves={moves}
               viewingIndex={viewingMoveIndex}
               onMoveClick={goToMove}
-              className="max-h-48 lg:max-h-52"
+              className="flex-1"
             />
           </div>
 
           {/* Analysis Panel */}
-          <div className="grow overflow-y-auto">
-            <div className="px-3 py-2 bg-zinc-800/50 border-b border-zinc-800">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
-                Analysis
-              </span>
+          <div className="surface-panel overflow-hidden flex-1 flex flex-col">
+            <div className="bg-[#1f1e1b] px-3 py-2 border-b border-[#312e2b]">
+              <span className="text-xs font-bold text-zinc-400 uppercase">Analysis</span>
             </div>
-            <AnalysisPanel
-              analysis={currentAnalysis?.analysis || null}
-              moveSan={currentAnalysis?.san || ""}
-              isAnalyzing={currentAnalysis?.isAnalyzing || false}
-            />
+            <div className="flex-1 overflow-y-auto">
+              <AnalysisPanel
+                analysis={currentAnalysis?.analysis || null}
+                moveSan={currentAnalysis?.san || ""}
+                isAnalyzing={currentAnalysis?.isAnalyzing || false}
+              />
+            </div>
           </div>
+
         </div>
       </div>
 
-      {/* ── Game Over Overlay ── */}
+      {/* Game Over Modal */}
       {isGameOver && result && <GameOverOverlay result={result} onNewGame={reset} />}
     </div>
   );
 }
 
-
 // ============================================================
-// NAVIGATION BUTTON
+// COMPACT NAVIGATION BUTTON
 // ============================================================
 
-function NavButton({
-  onClick,
-  label,
-  title,
-  danger = false,
-}: {
-  onClick: () => void;
-  label: string;
-  title: string;
-  danger?: boolean;
-}) {
+function NavButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       onClick={onClick}
-      title={title}
-      className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm transition-colors
-        ${danger
-          ? "bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400"
-          : "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white"
-        }`}
+      className="w-10 h-10 rounded surface-button text-lg flex items-center justify-center shrink-0"
     >
       {label}
     </button>
   );
 }
-
 
 // ============================================================
 // GAME OVER OVERLAY
@@ -488,7 +460,7 @@ function GameOverOverlay({
   const playerColor = useGameStore((s) => s.playerColor);
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 500);
+    const timer = setTimeout(() => setVisible(true), 600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -498,30 +470,27 @@ function GameOverOverlay({
   const isDraw = result.winner === "draw";
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 rounded-2xl p-8 max-w-sm w-full text-center
-                      border border-zinc-700 shadow-2xl animate-badge-pop">
-        <div className="text-6xl mb-4">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="surface-panel p-8 max-w-sm w-full text-center border border-white/10 shadow-2xl">
+        <div className="text-5xl mb-4">
           {isDraw ? "🤝" : isWin ? "🏆" : "😔"}
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">
-          {isDraw ? "Draw!" : isWin ? "You Win!" : "You Lose"}
+          {isDraw ? "Draw" : isWin ? "You Win!" : "You Lose"}
         </h2>
-        <p className="text-zinc-400 mb-6">{result.description}</p>
+        <p className="text-sm font-medium text-zinc-400 mb-6">{result.description}</p>
         <div className="space-y-3">
           <button
             onClick={onNewGame}
-            className="w-full py-3 rounded-xl font-bold text-lg
-                       bg-green-600 hover:bg-green-500 text-white transition-colors"
+            className="w-full py-3 action-button text-lg"
           >
             Play Again
           </button>
           <button
             onClick={() => setVisible(false)}
-            className="w-full py-3 rounded-xl font-bold text-sm
-                       bg-zinc-800 hover:bg-zinc-700 text-zinc-400 transition-colors"
+            className="w-full py-3 surface-button"
           >
-            Review Game
+            Review Board
           </button>
         </div>
       </div>
