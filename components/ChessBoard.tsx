@@ -31,7 +31,6 @@ export default function ChessBoard({
   const [mounted, setMounted] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoveSquares, setLegalMoveSquares] = useState([]);
-  const [boardWidth, setBoardWidth] = useState(480);
 
   useEffect(() => {
     setMounted(true);
@@ -42,16 +41,8 @@ export default function ChessBoard({
     setLegalMoveSquares([]);
   }, [fen]);
 
-  useEffect(() => {
-    const updateSize = () => {
-      const maxW = Math.min(window.innerWidth - 80, 560);
-      const maxH = window.innerHeight - 200;
-      setBoardWidth(Math.min(maxW, maxH, 480));
-    };
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  // FIXED: Removed the resize listener and JS-based width calculations. 
+  // We now use Tailwind CSS `aspect-square` for perfect stability.
 
   // Build square styles for highlights
   const squareStyles = useMemo(() => {
@@ -81,8 +72,7 @@ export default function ChessBoard({
   if (!mounted) {
     return (
       <div
-        className={`bg-zinc-800 rounded-lg flex items-center justify-center ${className}`}
-        style={{ width: boardWidth, height: boardWidth }}
+        className={`bg-zinc-800 rounded-lg flex items-center justify-center w-full max-w-[480px] aspect-square ${className}`}
       >
         <div className="text-zinc-500 text-sm">Loading board...</div>
       </div>
@@ -187,7 +177,8 @@ export default function ChessBoard({
   };
 
   return (
-    <div className={className} style={{ width: boardWidth }}>
+    // FIXED: Using pure CSS classes instead of JavaScript inline styles
+    <div className={`w-full max-w-[480px] aspect-square ${className}`}>
       <Chessboard options={boardOptions} />
     </div>
   );

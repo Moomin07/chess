@@ -14,7 +14,7 @@
 // Features:
 //   - Color-coded badges for each move
 //   - Click to navigate to any position
-//   - Auto-scrolls to the latest move
+//   - Auto-scrolls to the latest move WITHOUT scrolling the whole page
 //   - Shows "analyzing..." indicator
 //   - Highlights the currently viewed move
 //
@@ -61,9 +61,10 @@ export default function MoveList({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new moves are added
+  // FIXED: Now we only scroll the internal container, not the whole page window
   useEffect(() => {
-    if (viewingIndex === -1 && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    if (viewingIndex === -1 && containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [moves.length, viewingIndex]);
 
@@ -83,7 +84,7 @@ export default function MoveList({
     <div
       ref={containerRef}
       className={`
-        overflow-y-auto p-2 space-y-0.5
+        overflow-y-auto p-2 space-y-0.5 scroll-smooth
         ${className}
       `}
     >

@@ -295,7 +295,7 @@ function GameView() {
         </div>
 
         {/* ── Center: Board + Controls ── */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center w-full max-w-[480px]">
           {/* Opponent name */}
           <div className="w-full flex items-center justify-between mb-2 px-1">
             <span className="text-sm text-zinc-400">
@@ -341,9 +341,10 @@ function GameView() {
 
           {/* ── Hint Panel ── */}
           {isPlayerTurn && !isGameOver && !isAnalyzing && (
-            <div className="w-full mt-3">
+            // FIXED: Added min-h-[140px] to prevent layout jumping
+            <div className="w-full mt-3 min-h-[140px]">
               {currentHint ? (
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 h-full">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
                       💡 Hint
@@ -380,7 +381,7 @@ function GameView() {
           )}
 
           {/* Navigation Controls */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-3 w-full justify-center">
             <NavButton onClick={goToStart} label="⏮" title="Go to start" />
             <NavButton onClick={goBack} label="◀" title="Previous move" />
             <NavButton onClick={goForward} label="▶" title="Next move" />
@@ -402,7 +403,7 @@ function GameView() {
         </div>
 
         {/* ── Right Panel: Moves + Analysis ── */}
-        <div className="w-full lg:w-80 flex flex-col bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden lg:h-[600px]">
+        <div className="w-full lg:w-80 flex flex-col bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden lg:h-[600px] mt-4 lg:mt-0">
           {/* Move List */}
           <div className="border-b border-zinc-800">
             <div className="px-3 py-2 bg-zinc-800/50">

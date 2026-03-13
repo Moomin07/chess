@@ -108,39 +108,25 @@ export async function runAnalysisPipeline(
   }
 
   // ── Step 3: Run engine analyses SEQUENTIALLY (not parallel!) ──
-  // Running them in parallel breaks because both use the same engine
-  // instance, and the second call kills the first search.
-
   let preMoveAnalysis: SearchResult;
   let postMoveAnalysis: SearchResult;
 
   try {
     // FIRST: Analyze the position BEFORE the move
-    // "What should have been played here?"
     console.log("[Pipeline] Analyzing pre-move position...");
     preMoveAnalysis = await manager.analyzePosition(input.fenBefore, {
       multiPV: 3,
-      moveTime: 2500, // 1.5 seconds — fast and reliable
+      moveTime: 800, // FIXED: Reduced from 2500ms to 800ms for fast UI response
     });
     console.log(`[Pipeline] Pre-move analysis done. Best move: ${preMoveAnalysis.bestMove}, Lines: ${preMoveAnalysis.lines.length}, Depth: ${preMoveAnalysis.depth}`);
 
-    // Log the actual scores
-    for (const line of preMoveAnalysis.lines) {
-      console.log(`[Pipeline]   PV${line.rank}: ${line.moves[0]} score: cp=${line.score.centipawns} mate=${line.score.mate} depth=${line.depth}`);
-    }
-
     // SECOND: Analyze the position AFTER the move
-    // "How good is the resulting position?"
     console.log("[Pipeline] Analyzing post-move position...");
     postMoveAnalysis = await manager.analyzePosition(input.fenAfter, {
       multiPV: 1,
-      moveTime: 1500, // 1 second is enough for just evaluation
+      moveTime: 400, // FIXED: Reduced from 1500ms to 400ms to prevent hanging
     });
     console.log(`[Pipeline] Post-move analysis done. Depth: ${postMoveAnalysis.depth}`);
-
-    if (postMoveAnalysis.lines[0]) {
-      console.log(`[Pipeline]   Post eval: cp=${postMoveAnalysis.lines[0].score.centipawns} mate=${postMoveAnalysis.lines[0].score.mate}`);
-    }
 
   } catch (error) {
     console.error("[Pipeline] Engine analysis failed:", error);
@@ -158,18 +144,13 @@ export async function runAnalysisPipeline(
     return createFallbackResult(input, moveInfo, gamePhase, startTime);
   }
 
-  // Post-move scores (from the OPPONENT's perspective, since it's now their turn)
   const postMoveEvalCp = postBestLine?.score?.centipawns ?? null;
   const postMoveMate = postBestLine?.score?.mate ?? null;
 
-  // Normalize to White's perspective for display
   const evalBeforeWhite = normalizeLineScoreToWhite(bestLine, isWhiteToMove);
   const evalAfterWhite = postBestLine
     ? normalizeLineScoreToWhite(postBestLine, !isWhiteToMove)
     : 0;
-
-  console.log(`[Pipeline] Eval before (White's view): ${evalBeforeWhite}`);
-  console.log(`[Pipeline] Eval after (White's view): ${evalAfterWhite}`);
 
   // ── Step 5: Send evaluation progress ──
   if (input.onProgress) {
@@ -197,11 +178,6 @@ export async function runAnalysisPipeline(
   };
 
   const classificationResult = classifyMove(classificationInput);
-
-  console.log(`[Pipeline] Classification: ${classificationResult.classification}`);
-  console.log(`[Pipeline] Centipawn loss: ${classificationResult.centipawnLoss}`);
-  console.log(`[Pipeline] Best move: ${classificationResult.bestMoveUci}`);
-  console.log(`[Pipeline] Reason: ${classificationResult.reason}`);
 
   // ── Step 7: Send classification progress ──
   if (input.onProgress) {
@@ -288,8 +264,6 @@ export async function runAnalysisPipeline(
       result,
     });
   }
-
-  console.log(`[Pipeline] ===== Analysis complete: ${result.classification} (${result.centipawnLoss}cp) in ${analysisTimeMs.toFixed(0)}ms =====`);
 
   return result;
 }

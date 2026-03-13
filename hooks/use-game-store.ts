@@ -506,7 +506,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const manager = EngineManager.getInstance();
       const result = await manager.analyzePosition(state.fen, {
         multiPV: 3,
-        moveTime: 2000,
+        moveTime: 500, // FIXED: Reduced to 500ms so hints generate super fast
       });
 
       const bestLine = result.lines[0];
