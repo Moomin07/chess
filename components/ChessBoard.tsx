@@ -32,6 +32,11 @@ export default function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoveSquares, setLegalMoveSquares] = useState([]);
 
+  // ── Promotion State ──
+  const [moveFrom, setMoveFrom] = useState(null);
+  const [moveTo, setMoveTo] = useState(null);
+  const [showPromotionDialog, setShowPromotionDialog] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -40,9 +45,6 @@ export default function ChessBoard({
     setSelectedSquare(null);
     setLegalMoveSquares([]);
   }, [fen]);
-
-  // FIXED: Removed the resize listener and JS-based width calculations. 
-  // We now use Tailwind CSS `aspect-square` for perfect stability.
 
   // Build square styles for highlights
   const squareStyles = useMemo(() => {
@@ -79,6 +81,22 @@ export default function ChessBoard({
     );
   }
 
+  // ── Handle Promotion Selection ──
+  function onPromotionPieceSelect(piece) {
+    // piece comes in as "wQ", "bN", etc.
+    // If the user clicks outside the dialog to cancel, piece will be undefined
+    if (piece && moveFrom && moveTo) {
+      const promotionPiece = piece[1].toLowerCase(); // "q", "r", "b", "n"
+      onMove(moveFrom, moveTo, promotionPiece);
+    }
+
+    // Reset promotion state
+    setMoveFrom(null);
+    setMoveTo(null);
+    setShowPromotionDialog(false);
+    return true;
+  }
+
   // ── Build the v5 options object ──
   const boardOptions = {
     // Position
@@ -100,6 +118,11 @@ export default function ChessBoard({
     animationDurationInMs: 200,
     showAnimations: true,
 
+    // ── Promotion Properties ──
+    promotionToSquare: moveTo,
+    showPromotionDialog: showPromotionDialog,
+    onPromotionPieceSelect: onPromotionPieceSelect,
+
     // Dragging
     allowDragging: interactive,
 
@@ -113,50 +136,65 @@ export default function ChessBoard({
 
     // Handle piece drop (drag and release)
     onPieceDrop: ({ piece, sourceSquare, targetSquare }) => {
-      console.log("=== PIECE DROPPED ===");
-      console.log("From:", sourceSquare, "To:", targetSquare, "Piece:", piece);
-
       if (!interactive) return false;
+
+      const isPawn = piece[1] === "P";
+      const isLastRank =
+        (piece[0] === "w" && targetSquare[1] === "8") ||
+        (piece[0] === "b" && targetSquare[1] === "1");
+      const isPromotion = isPawn && isLastRank;
+
+      // FIXED: Intercept promotions to show the visual dialog
+      if (isPromotion) {
+        setMoveFrom(sourceSquare);
+        setMoveTo(targetSquare);
+        setShowPromotionDialog(true);
+        return false; // Reject the drop temporarily until they select a piece
+      }
 
       try {
         const chess = new Chess(fen);
-
-        // Check for promotion
-        const isPawn = piece[1] === "P";
-        const isLastRank =
-          (piece[0] === "w" && targetSquare[1] === "8") ||
-          (piece[0] === "b" && targetSquare[1] === "1");
-        const isPromotion = isPawn && isLastRank;
-
         const move = chess.move({
           from: sourceSquare,
           to: targetSquare,
-          promotion: isPromotion ? "q" : undefined,
         });
 
         if (move) {
-          console.log("Valid move:", move.san);
-          onMove(sourceSquare, targetSquare, isPromotion ? "q" : undefined);
+          onMove(sourceSquare, targetSquare);
           return true;
         }
 
-        console.log("Invalid move — chess.js rejected");
         return false;
       } catch (err) {
-        console.log("Move error:", err);
         return false;
       }
     },
 
     // Handle square click (click-to-move)
     onSquareClick: ({ piece, square }) => {
-      console.log("=== SQUARE CLICKED ===", square, "piece:", piece);
-
       if (!interactive) return;
 
       // If a piece is selected and this is a legal destination
       if (selectedSquare && legalMoveSquares.includes(square)) {
-        console.log("Moving:", selectedSquare, "→", square);
+        const chess = new Chess(fen);
+        const selectedPiece = chess.get(selectedSquare);
+
+        const isPawn = selectedPiece?.type === "p";
+        const isLastRank = square[1] === "8" || square[1] === "1";
+        const isPromotion = isPawn && isLastRank;
+
+        // FIXED: Show the dialog for click-to-move promotions too
+        if (isPromotion) {
+          setMoveFrom(selectedSquare);
+          setMoveTo(square);
+          setShowPromotionDialog(true);
+
+          setSelectedSquare(null);
+          setLegalMoveSquares([]);
+          return;
+        }
+
+        // Otherwise, make a normal move
         onMove(selectedSquare, square);
         setSelectedSquare(null);
         setLegalMoveSquares([]);
@@ -165,7 +203,6 @@ export default function ChessBoard({
 
       // Select this square and show legal moves
       const moves = getLegalMovesForSquare(square);
-      console.log("Legal moves from", square, ":", moves);
       if (moves.length > 0) {
         setSelectedSquare(square);
         setLegalMoveSquares(moves);
@@ -177,7 +214,6 @@ export default function ChessBoard({
   };
 
   return (
-    // FIXED: Using pure CSS classes instead of JavaScript inline styles
     <div className={`w-full max-w-[480px] aspect-square ${className}`}>
       <Chessboard options={boardOptions} />
     </div>

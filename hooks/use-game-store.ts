@@ -361,10 +361,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       viewingMoveIndex: -1,
     }));
 
-    // Check game over
+    // FIXED: Only set isGameOver to true, keeping isGameActive true so the board doesn't vanish
     const gameEnd = checkGameEndState(chess);
     if (gameEnd) {
-      set({ isGameOver: true, isGameActive: false, result: gameEnd });
+      set({ isGameOver: true, result: gameEnd });
       const moveIdx = get().moves.length - 1;
       doAnalyzeMove(moveIdx, get, set);
       return;
@@ -451,9 +451,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         viewingMoveIndex: -1,
       }));
 
+      // FIXED: Only set isGameOver to true, keeping isGameActive true so the board doesn't vanish
       const gameEnd = checkGameEndState(chess);
       if (gameEnd) {
-        set({ isGameOver: true, isGameActive: false, result: gameEnd });
+        set({ isGameOver: true, result: gameEnd });
       }
 
       // Analyze bot's move, then generate hint for player
@@ -506,7 +507,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const manager = EngineManager.getInstance();
       const result = await manager.analyzePosition(state.fen, {
         multiPV: 3,
-        moveTime: 500, // FIXED: Reduced to 500ms so hints generate super fast
+        moveTime: 500,
       });
 
       const bestLine = result.lines[0];
@@ -687,9 +688,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     if (!state.isGameActive) return;
     const winner: PlayerColor = state.playerColor === "white" ? "black" : "white";
+    // FIXED: Removed isGameActive: false here too
     set({
       isGameOver: true,
-      isGameActive: false,
       result: {
         winner,
         reason: GameEndReason.RESIGNATION,
@@ -703,9 +704,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state.isGameActive) return;
     const lastEval = state.evalHistory[state.evalHistory.length - 1];
     if ((lastEval && Math.abs(lastEval.evaluation) < 50) || state._chess.isDraw()) {
+      // FIXED: Removed isGameActive: false here too
       set({
         isGameOver: true,
-        isGameActive: false,
         result: {
           winner: "draw",
           reason: GameEndReason.AGREEMENT,
