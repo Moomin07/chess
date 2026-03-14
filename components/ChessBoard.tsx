@@ -1,7 +1,4 @@
 // @ts-nocheck
-// ============================================================
-// ChessMind Coach — Chess Board
-// ============================================================
 
 "use client";
 
@@ -64,7 +61,6 @@ export default function ChessBoard({
 
   if (!mounted) {
     return (
-      // FIXED: Removed max-w-[480px] so it can scale dynamically based on the parent
       <div className={`bg-[#262421] rounded-sm flex items-center justify-center w-full aspect-square ${className}`}>
         <div className="text-zinc-500 text-sm font-bold">Loading board...</div>
       </div>
@@ -165,7 +161,6 @@ export default function ChessBoard({
   };
 
   return (
-    // FIXED: Removed max-w-[480px] here too
     <div className={`w-full aspect-square ${className}`}>
       <Chessboard options={boardOptions} />
     </div>

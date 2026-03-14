@@ -1,6 +1,4 @@
-// ============================================================
-// ChessMind Coach — Analysis Pipeline (Fixed)
-// ============================================================
+//this code was written by moomin gulzar dar and belongs to him
 
 import {
   AnalysisResult,
@@ -47,10 +45,6 @@ import {
 import type { SearchResult } from "@/engine/stockfish-service";
 
 
-// ============================================================
-// TYPES
-// ============================================================
-
 export interface PipelineInput {
   fenBefore: string;
   fenAfter: string;
@@ -76,11 +70,6 @@ export interface PartialAnalysis {
   result?: AnalysisResult;
 }
 
-
-// ============================================================
-// MAIN PIPELINE — FIXED VERSION
-// ============================================================
-
 export async function runAnalysisPipeline(
   input: PipelineInput
 ): Promise<AnalysisResult> {
@@ -89,14 +78,12 @@ export async function runAnalysisPipeline(
 
   console.log(`[Pipeline] ===== Analyzing move: ${input.playedMoveSan} (${input.playedMoveUci}) =====`);
 
-  // ── Step 1: Analyze move properties ──
   const moveInfo = analyzeMoveProperties(input.fenBefore, input.playedMoveUci);
   const legalMoveCount = countLegalMoves(input.fenBefore);
   const gamePhase = detectGamePhase(input.fenBefore, input.moveNumber);
 
   console.log(`[Pipeline] Move: ${moveInfo.san}, Capture: ${moveInfo.isCapture}, Check: ${moveInfo.isCheck}, Legal moves: ${legalMoveCount}`);
 
-  // ── Step 2: Handle book and forced moves ──
   if (input.isBookMove) {
     console.log("[Pipeline] Book move — skipping analysis");
     return createBookMoveResult(input, moveInfo, gamePhase, startTime);
@@ -107,24 +94,21 @@ export async function runAnalysisPipeline(
     return createForcedMoveResult(input, moveInfo, gamePhase, manager, startTime);
   }
 
-  // ── Step 3: Run engine analyses SEQUENTIALLY (not parallel!) ──
   let preMoveAnalysis: SearchResult;
   let postMoveAnalysis: SearchResult;
 
   try {
-    // FIRST: Analyze the position BEFORE the move
     console.log("[Pipeline] Analyzing pre-move position...");
     preMoveAnalysis = await manager.analyzePosition(input.fenBefore, {
       multiPV: 3,
-      moveTime: 800, // FIXED: Reduced from 2500ms to 800ms for fast UI response
+      moveTime: 800,
     });
     console.log(`[Pipeline] Pre-move analysis done. Best move: ${preMoveAnalysis.bestMove}, Lines: ${preMoveAnalysis.lines.length}, Depth: ${preMoveAnalysis.depth}`);
 
-    // SECOND: Analyze the position AFTER the move
     console.log("[Pipeline] Analyzing post-move position...");
     postMoveAnalysis = await manager.analyzePosition(input.fenAfter, {
       multiPV: 1,
-      moveTime: 400, // FIXED: Reduced from 1500ms to 400ms to prevent hanging
+      moveTime: 400,
     });
     console.log(`[Pipeline] Post-move analysis done. Depth: ${postMoveAnalysis.depth}`);
 
@@ -133,7 +117,6 @@ export async function runAnalysisPipeline(
     return createFallbackResult(input, moveInfo, gamePhase, startTime);
   }
 
-  // ── Step 4: Extract evaluations ──
   const isWhiteToMove = input.color === "white";
   const preMoveLines = preMoveAnalysis.lines;
   const bestLine = preMoveLines[0];
@@ -152,7 +135,6 @@ export async function runAnalysisPipeline(
     ? normalizeLineScoreToWhite(postBestLine, !isWhiteToMove)
     : 0;
 
-  // ── Step 5: Send evaluation progress ──
   if (input.onProgress) {
     input.onProgress({
       stage: "evaluation",
@@ -161,7 +143,6 @@ export async function runAnalysisPipeline(
     });
   }
 
-  // ── Step 6: Classify the move ──
   const classificationInput: ClassificationInput = {
     playedMoveUci: input.playedMoveUci,
     colorToMove: input.color,
@@ -179,7 +160,6 @@ export async function runAnalysisPipeline(
 
   const classificationResult = classifyMove(classificationInput);
 
-  // ── Step 7: Send classification progress ──
   if (input.onProgress) {
     input.onProgress({
       stage: "classification",
@@ -188,10 +168,8 @@ export async function runAnalysisPipeline(
     });
   }
 
-  // ── Step 8: Detect tactical motifs ──
   const tacticalMotifs = detectTacticalMotifs(moveInfo, preMoveLines);
 
-  // ── Step 9: Generate coaching text ──
   const bestMoveSan = uciToSan(input.fenBefore, classificationResult.bestMoveUci);
 
   const templateInput: TemplateInput = {
@@ -226,11 +204,9 @@ export async function runAnalysisPipeline(
 
   const layers = generateAnalysis(templateInput);
 
-  // ── Step 10: Build engine evaluation objects ──
   const evalBefore = buildEngineEvaluation(preMoveAnalysis, bestLine, isWhiteToMove);
   const evalAfter = buildEngineEvaluation(postMoveAnalysis, postBestLine, !isWhiteToMove);
 
-  // ── Step 11: Build complete result ──
   const analysisTimeMs = performance.now() - startTime;
 
   const result: AnalysisResult = {
@@ -253,7 +229,6 @@ export async function runAnalysisPipeline(
     analysisTimeMs,
   };
 
-  // ── Step 12: Send final progress ──
   if (input.onProgress) {
     input.onProgress({
       stage: "full",
@@ -268,10 +243,6 @@ export async function runAnalysisPipeline(
   return result;
 }
 
-
-// ============================================================
-// SPECIAL CASE HANDLERS
-// ============================================================
 
 function createBookMoveResult(
   input: PipelineInput,
@@ -437,9 +408,6 @@ function createFallbackResult(
 }
 
 
-// ============================================================
-// HELPERS
-// ============================================================
 
 function normalizeLineScoreToWhite(line: PVLine, isWhiteToMove: boolean): number {
   if (line.score.mate != null) {

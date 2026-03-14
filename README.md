@@ -1,5 +1,8 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+i have created this for myself only for me to learn chess and as a fun and challenge project for myslef
+if you get a look into this make sure to put it to good use and good luck
+
 ## Getting Started
 
 First, run the development server:

@@ -1,6 +1,3 @@
-// ============================================================
-// ChessMind Coach — Game Store (Complete)
-// ============================================================
 
 import { create } from "zustand";
 import { Chess } from "chess.js";
@@ -32,9 +29,6 @@ import { EngineManager } from "@/engine/engine-manager";
 import { runAnalysisPipeline, createEvalHistoryEntry } from "@/analysis/analysis-pipeline";
 
 
-// ============================================================
-// ANALYSIS QUEUE — One analysis at a time
-// ============================================================
 
 let analysisQueue: Array<{
   moveIndex: number;
@@ -143,9 +137,6 @@ async function doAnalyzeMove(
 }
 
 
-// ============================================================
-// STORE INTERFACE
-// ============================================================
 
 interface HintData {
   bestMove: string;
@@ -200,9 +191,6 @@ interface GameStore {
 }
 
 
-// ============================================================
-// INITIAL STATE
-// ============================================================
 
 const initialState = {
   gameId: "",
@@ -231,16 +219,11 @@ const initialState = {
 };
 
 
-// ============================================================
-// THE STORE
-// ============================================================
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...initialState,
 
-  // ══════════════════════════════════════════
-  // Initialize Engine
-  // ══════════════════════════════════════════
+
   initializeEngine: async () => {
     try {
       set({ engineError: null });
@@ -255,9 +238,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ══════════════════════════════════════════
-  // Start Game
-  // ══════════════════════════════════════════
   startGame: async (playerColor, botLevel, coachingLevel) => {
     console.log(`[GameStore] Starting: ${playerColor}, ${botLevel.name} (~${botLevel.elo}), ${coachingLevel}`);
 
@@ -298,22 +278,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.error("[GameStore] Bot config failed:", error);
     }
 
-    // If player is black, bot goes first
     if (playerColor === "black") {
       setTimeout(() => {
         get().makeBotMove();
       }, 500);
     } else {
-      // Player is white — generate initial hint
       setTimeout(() => {
         get().generateHint();
       }, 1000);
     }
   },
 
-  // ══════════════════════════════════════════
-  // Player Move
-  // ══════════════════════════════════════════
+
   makePlayerMove: async (from, to, promotion) => {
     const state = get();
     if (!state.isGameActive || state.isGameOver || !state.isPlayerTurn || state.isBotThinking) {
@@ -361,7 +337,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       viewingMoveIndex: -1,
     }));
 
-    // FIXED: Only set isGameOver to true, keeping isGameActive true so the board doesn't vanish
     const gameEnd = checkGameEndState(chess);
     if (gameEnd) {
       set({ isGameOver: true, result: gameEnd });
@@ -370,7 +345,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    // Analyze player's move FIRST, then bot responds
     const moveIdx = get().moves.length - 1;
     doAnalyzeMove(moveIdx, get, set).then(() => {
       const currentState = get();
@@ -380,9 +354,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
-  // ══════════════════════════════════════════
-  // Bot Move
-  // ══════════════════════════════════════════
   makeBotMove: async () => {
     const state = get();
     if (!state.isGameActive || state.isGameOver || state.isPlayerTurn) return;
@@ -451,13 +422,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         viewingMoveIndex: -1,
       }));
 
-      // FIXED: Only set isGameOver to true, keeping isGameActive true so the board doesn't vanish
       const gameEnd = checkGameEndState(chess);
       if (gameEnd) {
         set({ isGameOver: true, result: gameEnd });
       }
 
-      // Analyze bot's move, then generate hint for player
       const botMoveIdx = get().moves.length - 1;
       doAnalyzeMove(botMoveIdx, get, set).then(() => {
         const current = get();
@@ -472,9 +441,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ══════════════════════════════════════════
-  // Queue Analysis
-  // ══════════════════════════════════════════
   queueAnalysis: (moveIndex: number) => {
     analysisQueue.push({
       moveIndex,
@@ -482,10 +448,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
     processAnalysisQueue(get, set);
   },
-
-  // ══════════════════════════════════════════
-  // Generate Hint — Best move suggestion
-  // ══════════════════════════════════════════
   generateHint: async () => {
     const state = get();
 
@@ -526,7 +488,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const level = state.coachingLevel;
       let explanation = "";
 
-      // Analyze what the best move does
       const moveInfo = analyzeMoveProperties(state.fen, bestMoveUci);
 
       if (level === CoachingLevel.BEGINNER) {
@@ -565,7 +526,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         explanation += `. Eval: ${evalCp > 0 ? "+" : ""}${(evalCp / 100).toFixed(1)}. `;
 
-        // Show alternatives
         if (result.lines.length > 1) {
           const alts = result.lines.slice(1, 3).map((l) => {
             const san = uciToSan(state.fen, l.moves[0]);
@@ -577,7 +537,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
           explanation += `Alternatives: ${alts.join(", ")}.`;
         }
 
-        // Show continuation
         if (bestLine.moves.length > 1) {
           const pvSans = buildPVSans(state.fen, bestLine.moves.slice(0, 6));
           if (pvSans.length > 1) {
@@ -585,10 +544,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
         }
       } else {
-        // Advanced
         explanation = `Best: ${bestMoveSan} [${evalCp > 0 ? "+" : ""}${(evalCp / 100).toFixed(2)}]`;
 
-        // Show PV
         if (bestLine.moves.length > 1) {
           const pvSans = buildPVSans(state.fen, bestLine.moves.slice(0, 8));
           if (pvSans.length > 1) {
@@ -596,7 +553,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
         }
 
-        // Show alternatives
         if (result.lines.length > 1) {
           const alts = result.lines.slice(1, 3).map((l) => {
             const san = uciToSan(state.fen, l.moves[0]);
@@ -626,10 +582,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ currentHint: null });
     }
   },
-
-  // ══════════════════════════════════════════
-  // Navigation
-  // ══════════════════════════════════════════
+  
   goToMove: (index) => {
     const state = get();
     if (index < -1 || index >= state.moves.length) return;
@@ -681,14 +634,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ══════════════════════════════════════════
-  // Game Actions
-  // ══════════════════════════════════════════
   resign: () => {
     const state = get();
     if (!state.isGameActive) return;
     const winner: PlayerColor = state.playerColor === "white" ? "black" : "white";
-    // FIXED: Removed isGameActive: false here too
     set({
       isGameOver: true,
       result: {
@@ -704,7 +653,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state.isGameActive) return;
     const lastEval = state.evalHistory[state.evalHistory.length - 1];
     if ((lastEval && Math.abs(lastEval.evaluation) < 50) || state._chess.isDraw()) {
-      // FIXED: Removed isGameActive: false here too
       set({
         isGameOver: true,
         result: {
@@ -732,10 +680,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 }));
 
-
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
 
 function checkGameEndState(chess: Chess): GameResult | null {
   if (chess.isCheckmate()) {
@@ -780,7 +724,6 @@ function applyBotRandomness(
         return pick.from + pick.to + (pick.promotion || "");
       }
     } catch {
-      /* fall through */
     }
   }
 
@@ -796,10 +739,6 @@ function applyBotRandomness(
   return botResult.bestMove;
 }
 
-/**
- * Convert a sequence of UCI moves to SAN notation
- * by replaying them on a chess board.
- */
 function buildPVSans(fen: string, uciMoves: string[]): string[] {
   const sans: string[] = [];
   try {
@@ -820,7 +759,6 @@ function buildPVSans(fen: string, uciMoves: string[]): string[] {
       }
     }
   } catch {
-    // Return what we have
   }
   return sans;
 }

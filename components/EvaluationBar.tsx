@@ -1,7 +1,4 @@
-// ============================================================
-// ChessMind Coach — Minimalist Evaluation Bar
-// ============================================================
-
+//minimal evalualtion bar
 "use client";
 import React from "react";
 

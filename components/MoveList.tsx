@@ -1,7 +1,4 @@
-// ============================================================
-// ChessMind Coach — Minimalist Move List
-// ============================================================
-
+// move list
 "use client";
 
 import React, { useEffect, useRef } from "react";
@@ -47,13 +44,11 @@ export default function MoveList({
           key={pairIndex} 
           className={`flex items-center text-sm ${pairIndex % 2 === 0 ? "bg-[#262421]" : "bg-[#2a2825]"}`}
         >
-          {/* Move number (Standard flat style) */}
           <div className="w-10 py-1.5 px-2 text-xs font-bold text-zinc-500 text-right bg-[#1f1e1b] border-r border-white/5 shrink-0">
             {pair.moveNumber}.
           </div>
 
           <div className="flex-1 flex px-2 py-1 gap-2">
-            {/* White's move */}
             {pair.white && (
               <MoveEntry
                 move={pair.white.move}
@@ -63,7 +58,6 @@ export default function MoveList({
               />
             )}
 
-            {/* Black's move */}
             {pair.black && (
               <MoveEntry
                 move={pair.black.move}
@@ -118,7 +112,6 @@ function MoveEntry({
   );
 }
 
-// ── Helpers ──
 interface MovePair {
   moveNumber: number;
   white: { move: MoveRecord; index: number } | null;

@@ -1,49 +1,15 @@
-// ============================================================
-// ChessMind Coach — Chess Utility Functions
-// ============================================================
-//
-// This file wraps the chess.js library with helper functions
-// tailored for our coaching application. It provides:
-//
-//   - Move format conversion (UCI ↔ SAN)
-//   - Board state queries (what pieces are where)
-//   - Move property detection (capture, check, sacrifice, etc.)
-//   - Material counting and comparison
-//   - Square analysis (is a square attacked? defended?)
-//   - FEN manipulation utilities
-//
-// WHY WE NEED THIS:
-//
-// The engine speaks UCI notation ("e2e4", "g1f3").
-// Humans read SAN notation ("e4", "Nf3").
-// The classifier needs to know if a move is a capture,
-// sacrifice, or check.
-// The analysis text needs to name pieces and squares.
-//
-// This file bridges all those needs in one place.
-//
-// ============================================================
 
 import { Chess, Square, Piece, Move, Color } from "chess.js";
 
-
-// ============================================================
-// PIECE VALUES
-// ============================================================
-// Standard piece values in centipawns. Used for material
-// counting and sacrifice detection.
-// ============================================================
-
 export const PIECE_VALUES: Record<string, number> = {
-  p: 100,   // Pawn
-  n: 320,   // Knight
-  b: 330,   // Bishop
-  r: 500,   // Rook
-  q: 900,   // Queen
-  k: 0,     // King (infinite value, but 0 for material count)
+  p: 100,   
+  n: 320,   
+  b: 330,   
+  r: 500,   
+  q: 900,   
+  k: 0,    
 };
 
-// Full piece names for natural language generation
 export const PIECE_NAMES: Record<string, string> = {
   p: "pawn",
   n: "knight",
@@ -53,7 +19,6 @@ export const PIECE_NAMES: Record<string, string> = {
   k: "king",
 };
 
-// Piece symbols for display
 export const PIECE_SYMBOLS: Record<string, string> = {
   p: "♟",
   n: "♞",
@@ -70,16 +35,8 @@ export const PIECE_SYMBOLS: Record<string, string> = {
 };
 
 
-// ============================================================
-// MOVE CONVERSION — UCI ↔ SAN
-// ============================================================
 
 /**
- * Convert a UCI move to SAN (Standard Algebraic Notation).
- *
- * UCI: "e2e4", "g1f3", "e7e8q"
- * SAN: "e4",   "Nf3",  "e8=Q"
- *
  * @param fen     - The position BEFORE the move
  * @param uciMove - Move in UCI notation
  * @returns The move in SAN notation, or the UCI move if conversion fails
@@ -105,11 +62,6 @@ export function uciToSan(fen: string, uciMove: string): string {
 }
 
 /**
- * Convert a SAN move to UCI notation.
- *
- * SAN: "e4",  "Nf3",  "e8=Q", "O-O"
- * UCI: "e2e4", "g1f3", "e7e8q", "e1g1"
- *
  * @param fen     - The position BEFORE the move
  * @param sanMove - Move in SAN notation
  * @returns The move in UCI notation, or the SAN move if conversion fails
@@ -133,11 +85,6 @@ export function sanToUci(fen: string, sanMove: string): string {
 }
 
 /**
- * Convert a sequence of UCI moves to SAN notation.
- *
- * This is used to convert the engine's principal variation
- * (a list of UCI moves) into human-readable notation.
- *
  * @param fen      - Starting position (FEN)
  * @param uciMoves - Array of UCI moves
  * @returns Array of SAN moves
@@ -165,24 +112,16 @@ export function uciSequenceToSan(
       if (move) {
         sanMoves.push(move.san);
       } else {
-        // If a move fails (shouldn't happen with valid engine output),
-        // break and return what we have so far
         break;
       }
     }
   } catch {
-    // Return whatever we managed to convert
   }
 
   return sanMoves;
 }
 
 /**
- * Format a principal variation as a human-readable string.
- *
- * Input:  FEN + ["e2e4", "e7e5", "g1f3", "b8c6"]
- * Output: "1. e4 e5 2. Nf3 Nc6"
- *
  * @param fen          - Starting position (FEN)
  * @param uciMoves     - Array of UCI moves
  * @param startMoveNum - The move number to start from
@@ -207,7 +146,6 @@ export function formatVariation(
       result += `${moveNum}. ${sanMoves[i]} `;
     } else {
       if (i === 0) {
-        // If starting with Black's move, show "1... e5" format
         result += `${moveNum}... ${sanMoves[i]} `;
       } else {
         result += `${sanMoves[i]} `;
@@ -221,16 +159,7 @@ export function formatVariation(
 }
 
 
-// ============================================================
-// MOVE ANALYSIS — Properties of a specific move
-// ============================================================
-
-/**
- * Detailed information about a move, used by the classifier
- * and the analysis text generator.
- */
 export interface MoveInfo {
-  // Basic move data
   san: string;              // "Nxd5"
   uci: string;              // "c3d5"
   from: string;             // "c3"
@@ -253,11 +182,9 @@ export interface MoveInfo {
   promotionPiece: string | null;  // "q" if promoting to queen
   isEnPassant: boolean;     // Is this an en passant capture?
 
-  // Sacrifice detection
-  isSacrifice: boolean;     // Is the moving piece going to an attacked square?
-  materialDelta: number;    // Material change in centipawns (negative = gave up material)
+  isSacrifice: boolean;    
+  materialDelta: number; 
 
-  // Position effects
   givesDoubleCheck: boolean;
   isKingsideCastling: boolean;
   isQueensideCastling: boolean;
@@ -265,11 +192,6 @@ export interface MoveInfo {
 
 
 /**
- * Analyze a move and extract all its properties.
- *
- * This is the main function the classifier calls to understand
- * what a move does — is it a capture? A check? A sacrifice?
- *
  * @param fen     - Position BEFORE the move
  * @param uciMove - The move in UCI notation
  * @returns Detailed move information
@@ -284,13 +206,10 @@ export function analyzeMoveProperties(
   const to = uciMove.substring(2, 4) as Square;
   const promotion = uciMove.length === 5 ? uciMove[4] : undefined;
 
-  // Get the piece that's moving
   const movingPiece = game.get(from) ?? null;
 
-  // Check if there's a piece on the destination square (capture)
   const targetPiece = game.get(to) ?? null;
 
-  // Make the move to check for check/checkmate
   const move = game.move({
     from,
     to,
@@ -298,14 +217,11 @@ export function analyzeMoveProperties(
   });
 
   if (!move) {
-    // Move is invalid — return defaults
     return createDefaultMoveInfo(uciMove);
   }
 
-  // Determine if the move is a sacrifice
   const isSacrifice = detectSacrifice(fen, from, to, movingPiece, targetPiece);
 
-  // Calculate material change
   const materialDelta = calculateMaterialDelta(
     movingPiece,
     targetPiece,
@@ -313,7 +229,6 @@ export function analyzeMoveProperties(
     fen
   );
 
-  // Check for castling
   const isCastling = move.flags.includes("k") || move.flags.includes("q");
   const isKingsideCastling = move.flags.includes("k");
   const isQueensideCastling = move.flags.includes("q");
@@ -342,15 +257,12 @@ export function analyzeMoveProperties(
     isEnPassant: move.flags.includes("e"),
     isSacrifice,
     materialDelta,
-    givesDoubleCheck: false, // chess.js doesn't easily expose this
+    givesDoubleCheck: false,
     isKingsideCastling,
     isQueensideCastling,
   };
 }
 
-/**
- * Create a default MoveInfo when move analysis fails.
- */
 function createDefaultMoveInfo(uciMove: string): MoveInfo {
   return {
     san: uciMove,
@@ -379,27 +291,6 @@ function createDefaultMoveInfo(uciMove: string): MoveInfo {
 }
 
 
-// ============================================================
-// SACRIFICE DETECTION
-// ============================================================
-
-/**
- * Determine if a move is a sacrifice.
- *
- * A sacrifice means the moving piece goes to a square where
- * it can be captured, and the material given up is NOT
- * immediately recaptured for equal or greater value.
- *
- * NOT a sacrifice:
- *   - A simple capture where you take a piece of equal/greater value
- *   - A trade (capture followed by recapture of equal value)
- *
- * IS a sacrifice:
- *   - Moving a piece to an attacked square without capturing
- *     anything of equal value
- *   - Capturing a piece of lesser value on an attacked square
- *     (e.g., taking a pawn with a queen on a defended square)
- */
 function detectSacrifice(
   fen: string,
   from: Square,
@@ -412,48 +303,27 @@ function detectSacrifice(
   // Kings can't sacrifice
   if (movingPiece.type === "k") return false;
 
-  // Pawns sacrificing is less notable (gambits are common)
-  // Still detect it but it requires moving to an attacked square
   const movingPieceValue = PIECE_VALUES[movingPiece.type] || 0;
   const capturedValue = targetPiece ? PIECE_VALUES[targetPiece.type] || 0 : 0;
 
-  // Check if the destination square is attacked by the opponent
   const game = new Chess(fen);
   const opponentColor: Color = movingPiece.color === "w" ? "b" : "w";
   const isAttacked = game.isAttacked(to, opponentColor);
 
   if (!isAttacked) {
-    return false; // Not going to an attacked square — not a sacrifice
+    return false;
   }
-
-  // The piece is moving to an attacked square.
-  // If we're capturing something of equal or greater value, it's a trade, not a sacrifice.
   if (capturedValue >= movingPieceValue) {
-    return false; // Trading or winning material — not a sacrifice
+    return false; 
   }
 
-  // Moving a piece worth more than what we're capturing to an attacked square
-  // This IS a sacrifice if the piece we're risking is valuable enough
+
   const materialRisk = movingPieceValue - capturedValue;
-  return materialRisk >= 100; // At least a pawn's worth of sacrifice
+  return materialRisk >= 100;
 }
 
 
-// ============================================================
-// MATERIAL CALCULATION
-// ============================================================
 
-/**
- * Calculate the material change caused by a move.
- *
- * Returns a value in centipawns:
- *   - Positive: gained material (captured something)
- *   - Negative: lost material (sacrifice)
- *   - Zero: no material change (quiet move)
- *
- * For promotions, adds the value of the promotion piece
- * minus the pawn value.
- */
 function calculateMaterialDelta(
   movingPiece: Piece | null,
   targetPiece: Piece | null,
@@ -462,26 +332,21 @@ function calculateMaterialDelta(
 ): number {
   let delta = 0;
 
-  // Material gained from capture
   if (targetPiece) {
     delta += PIECE_VALUES[targetPiece.type] || 0;
   }
 
-  // En passant capture
   if (move.flags.includes("e")) {
-    delta += PIECE_VALUES["p"]; // Captured a pawn via en passant
+    delta += PIECE_VALUES["p"]; 
   }
 
-  // Promotion: gain the new piece, lose the pawn
   if (move.promotion) {
     delta += (PIECE_VALUES[move.promotion] || 0) - PIECE_VALUES["p"];
   }
 
-  // Check if the moving piece is now on an attacked square
-  // (meaning we might lose it — this is a potential sacrifice)
+  
   if (movingPiece && movingPiece.type !== "k") {
     const game = new Chess(fen);
-    // Make the move to check the resulting position
     const to = move.to as Square;
     game.move({
       from: move.from as Square,
@@ -489,13 +354,10 @@ function calculateMaterialDelta(
       promotion: move.promotion as "q" | "r" | "b" | "n" | undefined,
     });
 
-    // After the move, check if our piece is attacked
     const opponentColor: Color = movingPiece.color === "w" ? "b" : "w";
     const isNowAttacked = game.isAttacked(to, opponentColor);
 
     if (isNowAttacked && delta < (PIECE_VALUES[movingPiece.type] || 0)) {
-      // The piece might be captured, making the material delta worse
-      // Only flag this if the capture would lose material
       delta -= PIECE_VALUES[movingPiece.type] || 0;
     }
   }
@@ -504,14 +366,9 @@ function calculateMaterialDelta(
 }
 
 
-// ============================================================
-// BOARD STATE QUERIES
-// ============================================================
 
-/**
- * Count all material on the board for both sides.
- *
- * @param fen - The position in FEN notation
+
+/**@param fen - The position in FEN notation
  * @returns Material count for white and black in centipawns
  */
 export function countMaterial(fen: string): {
@@ -547,14 +404,12 @@ export function countMaterial(fen: string): {
   return {
     white,
     black,
-    difference: white - black, // Positive = White has more material
+    difference: white - black, 
   };
 }
 
 /**
- * Get all legal moves in a position.
- *
- * @param fen - The position in FEN notation
+  @param fen - The position in FEN notation
  * @returns Array of legal moves with details
  */
 export function getLegalMoves(fen: string): Move[] {
@@ -567,9 +422,7 @@ export function getLegalMoves(fen: string): Move[] {
 }
 
 /**
- * Count the number of legal moves in a position.
- *
- * @param fen - The position in FEN notation
+ @param fen - The position in FEN notation
  * @returns Number of legal moves
  */
 export function countLegalMoves(fen: string): number {
@@ -577,8 +430,6 @@ export function countLegalMoves(fen: string): number {
 }
 
 /**
- * Check if a position is check, checkmate, or stalemate.
- *
  * @param fen - The position in FEN notation
  */
 export function getPositionStatus(fen: string): {
@@ -612,8 +463,6 @@ export function getPositionStatus(fen: string): {
 }
 
 /**
- * Get which side is to move from a FEN string.
- *
  * @param fen - The position in FEN notation
  * @returns "white" or "black"
  */
@@ -622,10 +471,7 @@ export function getSideToMove(fen: string): "white" | "black" {
   return parts[1] === "w" ? "white" : "black";
 }
 
-/**
- * Get the full move number from a FEN string.
- *
- * @param fen - The position in FEN notation
+/**@param fen - The position in FEN notation
  * @returns The full move number (starts at 1)
  */
 export function getMoveNumber(fen: string): number {
@@ -634,8 +480,6 @@ export function getMoveNumber(fen: string): number {
 }
 
 /**
- * Check if a square is attacked by a given color.
- *
  * @param fen    - The position in FEN notation
  * @param square - The square to check (e.g., "e4")
  * @param byColor - Which color is attacking ("w" or "b")
@@ -655,8 +499,6 @@ export function isSquareAttacked(
 }
 
 /**
- * Get the piece on a specific square.
- *
  * @param fen    - The position in FEN notation
  * @param square - The square to check (e.g., "e4")
  * @returns The piece, or null if the square is empty
@@ -682,42 +524,16 @@ export function getPieceAt(
 }
 
 
-// ============================================================
-// SQUARE NAMING UTILITIES
-// ============================================================
-
-/**
- * Get a human-readable description of a square.
- *
- * "e4" → "the e4 square"
- * "d1" → "the d1 square"
- */
 export function describeSquare(square: string): string {
   return `the ${square} square`;
 }
 
-/**
- * Get a human-readable description of a piece on a square.
- *
- * ("n", "f3") → "the knight on f3"
- * ("q", "d1") → "the queen on d1"
- */
 export function describePiece(pieceType: string, square: string): string {
   const name = PIECE_NAMES[pieceType.toLowerCase()] || "piece";
   return `the ${name} on ${square}`;
 }
 
-/**
- * Get a human-readable description of a move.
- *
- * This creates a plain-English description of what a move does.
- *
- * Examples:
- *   "Knight moves from g1 to f3"
- *   "Pawn captures on d5"
- *   "Kingside castling"
- *   "Pawn promotes to queen on e8"
- */
+
 export function describeMove(moveInfo: MoveInfo): string {
   const pieceName =
     moveInfo.pieceName.charAt(0).toUpperCase() + moveInfo.pieceName.slice(1);
@@ -749,17 +565,11 @@ export function describeMove(moveInfo: MoveInfo): string {
 }
 
 
-// ============================================================
-// FEN UTILITIES
-// ============================================================
 
-/** The starting position in FEN notation */
 export const STARTING_FEN =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 /**
- * Validate that a FEN string is well-formed.
- *
  * @param fen - The FEN string to validate
  * @returns true if the FEN is valid
  */
@@ -773,8 +583,6 @@ export function isValidFen(fen: string): boolean {
 }
 
 /**
- * Apply a UCI move to a FEN position and return the new FEN.
- *
  * @param fen     - The position before the move
  * @param uciMove - The move in UCI notation
  * @returns The new FEN after the move, or null if the move is illegal
@@ -800,8 +608,6 @@ export function applyMove(fen: string, uciMove: string): string | null {
 }
 
 /**
- * Check if a UCI move is legal in a given position.
- *
  * @param fen     - The position
  * @param uciMove - The move to check
  * @returns true if the move is legal
@@ -826,13 +632,9 @@ export function getLegalMovesUci(fen: string): string[] {
 }
 
 
-// ============================================================
-// GAME RESULT DETECTION
-// ============================================================
+
 
 /**
- * Check if the game is over and why.
- *
  * @param fen - The current position
  * @returns Game result information, or null if the game continues
  */
@@ -845,7 +647,6 @@ export function checkGameEnd(fen: string): {
     const game = new Chess(fen);
 
     if (game.isCheckmate()) {
-      // The side to move is in checkmate — the OTHER side wins
       const winner = game.turn() === "w" ? "black" : "white";
       return {
         isOver: true,
@@ -893,24 +694,9 @@ export function checkGameEnd(fen: string): {
 }
 
 
-// ============================================================
-// POSITION DESCRIPTION HELPERS
-// ============================================================
-// These functions generate descriptive text about positions,
-// used by the natural language generation module.
-// ============================================================
-
-/**
- * Describe the material balance in plain English.
- *
- * Examples:
- *   "Material is equal"
- *   "White is up a knight (3.2 pawns)"
- *   "Black has the bishop pair and an extra pawn"
- */
 export function describeMaterialBalance(fen: string): string {
   const material = countMaterial(fen);
-  const diff = material.difference; // Positive = White has more
+  const diff = material.difference; 
 
   if (Math.abs(diff) < 50) {
     return "Material is equal";
@@ -933,16 +719,13 @@ export function describeMaterialBalance(fen: string): string {
 }
 
 /**
- * Describe the king safety situation briefly.
- *
  * @param fen - The position
  * @returns A description of king safety for both sides
  */
 export function describeKingSafety(fen: string): string {
   const piecePart = fen.split(" ")[0];
 
-  // Very basic king safety heuristic:
-  // Check if kings have castled (king on g1/c1 or g8/c8)
+
   const descriptions: string[] = [];
 
   // Find king positions
@@ -967,7 +750,6 @@ export function describeKingSafety(fen: string): string {
     }
   }
 
-  // Check if castled
   if (whiteKingSquare === "g1" || whiteKingSquare === "h1") {
     descriptions.push("White has castled kingside");
   } else if (whiteKingSquare === "c1" || whiteKingSquare === "b1") {

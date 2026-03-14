@@ -1,36 +1,4 @@
-// ============================================================
-// ChessMind Coach — Engine Manager
-// ============================================================
-//
-// This class manages TWO separate Stockfish instances:
-//
-//   1. ANALYSIS ENGINE — runs at full strength, MultiPV mode
-//      Used to evaluate every move both players make.
-//      Always tells the truth about the position.
-//
-//   2. BOT ENGINE — runs with skill limitations
-//      Used to generate the bot opponent's moves.
-//      Deliberately weakened to match the selected difficulty.
-//
-// WHY TWO ENGINES?
-//
-// If we used one engine for both, we'd have a problem:
-//   - We set Skill Level to 5 for the bot
-//   - Bot makes its move
-//   - We need to analyze that move at full strength
-//   - We change Skill Level to 20
-//   - We analyze
-//   - Now it's the bot's turn again
-//   - We set Skill Level back to 5
-//   - ...constant reconfiguration, risk of contamination
-//
-// With two engines, they run independently:
-//   - Analysis engine: ALWAYS full strength, ALWAYS MultiPV
-//   - Bot engine: configured once per game, never changes
-//   - They run in separate Web Workers (separate threads)
-//   - Zero interference between them
-//
-// ============================================================
+//manages two stockfish interfaces
 
 import {
   StockfishService,
@@ -40,65 +8,35 @@ import {
 } from "./stockfish-service";
 import type { BotLevel, PVLine } from "@/lib/types";
 
-// ============================================================
-// TYPES
-// ============================================================
-
-/** Status of the engine manager */
 export type EngineStatus =
-  | "not_initialized"  // Haven't called initialize() yet
-  | "initializing"     // Currently loading engines
-  | "ready"            // Both engines are ready
-  | "error";           // Something went wrong
+  | "not_initialized"  
+  | "initializing"    
+  | "ready"         
+  | "error";           
 
-/** Progress callback for analysis */
 export type AnalysisProgressCallback = (lines: PVLine[]) => void;
 
-
-// ============================================================
-// SINGLETON INSTANCE
-// ============================================================
-// We use a singleton pattern because there should only ever be
-// ONE EngineManager in the entire application. Creating multiple
-// would spawn extra Web Workers and waste resources.
-// ============================================================
 
 let instance: EngineManager | null = null;
 
 
-// ============================================================
-// MAIN CLASS
-// ============================================================
 
 export class EngineManager {
-  // ── The two engine instances ──
   private analysisEngine: StockfishService;
   private botEngine: StockfishService;
 
-  // ── State tracking ──
   private status: EngineStatus = "not_initialized";
   private currentBotLevel: BotLevel | null = null;
   private initPromise: Promise<void> | null = null;
 
-  // ── Error tracking ──
   private lastError: string | null = null;
 
-  /**
-   * Private constructor — use EngineManager.getInstance() instead.
-   */
   private constructor() {
     this.analysisEngine = new StockfishService("analysis");
     this.botEngine = new StockfishService("bot");
   }
 
-  /**
-   * Get the singleton EngineManager instance.
-   *
-   * Usage:
-   *   const manager = EngineManager.getInstance();
-   *   await manager.initialize();
-   *   const result = await manager.analyzePosition(fen);
-   */
+ 
   static getInstance(): EngineManager {
     if (!instance) {
       instance = new EngineManager();
@@ -106,11 +44,7 @@ export class EngineManager {
     return instance;
   }
 
-  /**
-   * Destroy the singleton instance and free all resources.
-   * Call this when the app is shutting down or the user
-   * navigates away from the game.
-   */
+  
   static destroyInstance(): void {
     if (instance) {
       instance.destroy();
@@ -119,34 +53,13 @@ export class EngineManager {
   }
 
 
-  // ============================================================
-  // LIFECYCLE
-  // ============================================================
-
-  /**
-   * Initialize both engines.
-   *
-   * This spawns two Web Workers, loads Stockfish in each, and
-   * performs the UCI handshake for both. Takes 2-5 seconds
-   * depending on the device.
-   *
-   * Safe to call multiple times — subsequent calls return the
-   * same promise without re-initializing.
-   *
-   * Usage:
-   *   const manager = EngineManager.getInstance();
-   *   await manager.initialize();
-   *   // Now ready to use!
-   */
+ 
   async initialize(): Promise<void> {
-    // If already initialized, do nothing
     if (this.status === "ready") {
       console.log("[EngineManager] Already initialized");
       return;
     }
 
-    // If currently initializing, return the existing promise
-    // (prevents double-initialization from React's useEffect)
     if (this.status === "initializing" && this.initPromise) {
       console.log("[EngineManager] Already initializing, waiting...");
       return this.initPromise;

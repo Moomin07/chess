@@ -4,13 +4,13 @@
   --font-sans: var(--font-sans), sans-serif;
 }
 
-/* ── 1. Global Base (Flat, solid dark gray for the game) ── */
+
 body {
   background-color: #312e2b; 
   color: #ffffff;
 }
 
-/* ── 2. Opening Screen Pattern (Only applied to setup page) ── */
+
 .checkerboard-bg {
   background-color: #312e2b;
   background-image: 
@@ -20,7 +20,6 @@ body {
   background-position: 0 0, 32px 32px;
 }
 
-/* ── 3. UI Elements ── */
 .surface-panel {
   @apply bg-[#262421] rounded-md border-none shadow-[0_15px_40px_rgba(0,0,0,0.4)];
 }
@@ -43,7 +42,6 @@ body {
   box-shadow: 0 4px 0 #2a2825;
 }
 
-/* ── 4. Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
 }

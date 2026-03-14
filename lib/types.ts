@@ -1,49 +1,25 @@
-// ============================================================
-// ChessMind Coach — Core Type Definitions
-// ============================================================
-// This file defines EVERY data structure used throughout the
-// application. All other files import from here. Think of this
-// as the "dictionary" that the entire app agrees on.
-//
-// We use TypeScript enums for fixed categories (like move
-// classifications) and interfaces for data shapes (like what
-// an engine evaluation looks like).
-// ============================================================
-
-
-// ============================================================
-// MOVE CLASSIFICATION
-// ============================================================
-// These are the categories assigned to every move, directly
-// matching what Chess.com and Lichess display. Each has a
-// symbol, a color, and specific criteria for when it applies.
-// The classifier (which we'll build later) assigns one of
-// these to every single move in the game.
-// ============================================================
 
 export enum MoveClassification {
-  BRILLIANT   = "brilliant",   // !! — Sacrifice or only-move in critical position
-  GREAT       = "great",       // !  — Strong move, somewhat hard to find
-  BEST        = "best",        // ✓  — Engine's top choice, natural/expected
-  EXCELLENT   = "excellent",   // ○  — Very close to best (≤10 centipawn loss)
-  GOOD        = "good",        // ●  — Reasonable move (11-30 centipawn loss)
-  BOOK        = "book",        // ⊘  — Known opening theory move
-  INACCURACY  = "inaccuracy",  // ?! — Noticeable error (31-100 cp loss)
-  MISTAKE     = "mistake",     // ?  — Significant error (101-250 cp loss)
-  BLUNDER     = "blunder",     // ?? — Game-changing error (>250 cp loss)
-  MISS        = "miss",        // △  — Missed a winning opportunity
-  FORCED      = "forced",      // ⊙  — Only one legal move existed
+  BRILLIANT   = "brilliant", 
+  GREAT       = "great",       
+  BEST        = "best",       
+  EXCELLENT   = "excellent",   
+  GOOD        = "good",        
+  BOOK        = "book",        
+  INACCURACY  = "inaccuracy", 
+  MISTAKE     = "mistake",     
+  BLUNDER     = "blunder",    
+  MISS        = "miss",       
+  FORCED      = "forced",     
 }
 
-// Display properties for each classification — symbol, color,
-// and human-readable label. The UI components use this to
-// render badges next to each move.
+
 export const CLASSIFICATION_DISPLAY: Record<MoveClassification, {
   symbol: string;
   label: string;
-  color: string;        // Tailwind text color class
-  bgColor: string;      // Tailwind background color class
-  description: string;  // Tooltip text
+  color: string;        
+  bgColor: string;     
+  description: string; 
 }> = {
   [MoveClassification.BRILLIANT]: {
     symbol: "!!",
@@ -125,25 +101,19 @@ export const CLASSIFICATION_DISPLAY: Record<MoveClassification, {
 };
 
 
-// ============================================================
-// COACHING LEVEL
-// ============================================================
-// The player selects their coaching level, which controls how
-// the natural language analysis is written. A beginner gets
-// simple analogies, an advanced player gets dense variations.
-// ============================================================
+
 
 export enum CoachingLevel {
-  BEGINNER     = "beginner",     // Simple language, analogies, no jargon
-  INTERMEDIATE = "intermediate", // Standard chess terminology
-  ADVANCED     = "advanced",     // Full engine-depth analysis
+  BEGINNER     = "beginner",     
+  INTERMEDIATE = "intermediate", 
+  ADVANCED     = "advanced",     
 }
 
 export const COACHING_LEVEL_DISPLAY: Record<CoachingLevel, {
   label: string;
   description: string;
-  maxVariationDepth: number;  // How many moves ahead to show
-  maxWords: number;           // Approximate word limit for analysis
+  maxVariationDepth: number;  
+  maxWords: number;           
 }> = {
   [CoachingLevel.BEGINNER]: {
     label: "Beginner",
@@ -166,14 +136,6 @@ export const COACHING_LEVEL_DISPLAY: Record<CoachingLevel, {
 };
 
 
-// ============================================================
-// GAME PHASE
-// ============================================================
-// The phase of the game affects what kind of advice is given.
-// Opening advice focuses on development and theory. Middlegame
-// advice focuses on plans and tactics. Endgame advice focuses
-// on technique and pawn structure.
-// ============================================================
 
 export enum GamePhase {
   OPENING    = "opening",
@@ -182,117 +144,61 @@ export enum GamePhase {
 }
 
 
-// ============================================================
-// PLAYER COLOR
-// ============================================================
-
 export type PlayerColor = "white" | "black";
 
 
-// ============================================================
-// ENGINE EVALUATION
-// ============================================================
-// This is what the Stockfish engine returns after analyzing a
-// position. It contains:
-// - The numerical evaluation (centipawns or mate-in-N)
-// - Win/Draw/Loss probabilities
-// - The best move(s) and their continuations
-// - Technical details like depth searched and nodes examined
-// ============================================================
 
 export interface EngineEvaluation {
-  // The centipawn evaluation from White's perspective.
-  // Positive = White is better, Negative = Black is better.
-  // Example: +150 means White is ahead by roughly 1.5 pawns.
-  // null if the position is a forced mate.
+ 
   centipawns: number | null;
 
-  // Mate-in-N moves from the perspective of the side to move.
-  // Positive = the side to move can force mate in N moves.
-  // Negative = the side to move is getting mated in N moves.
-  // null if no forced mate is found.
   mate: number | null;
 
-  // How deep the engine searched (in half-moves / plies).
-  // Higher depth = more accurate evaluation.
-  // We target depth 22-28 for analysis.
   depth: number;
 
-  // Selective search depth — the deepest line the engine
-  // explored in critical variations.
   selectiveDepth: number;
 
-  // Win/Draw/Loss probabilities (each 0-100, sum to ~100).
-  // These come from Stockfish's WDL model and are more
-  // intuitive for humans than raw centipawn values.
   winProbability: number;
   drawProbability: number;
   lossProbability: number;
 
-  // The best move in UCI notation (e.g., "e2e4", "g1f3").
   bestMove: string;
 
-  // The ponder move — what the engine expects the opponent
-  // to reply with after the best move.
   ponderMove: string | null;
 
-  // The principal variation — the engine's predicted best
-  // play for both sides from this position, as a sequence
-  // of UCI moves.
   principalVariation: string[];
 
-  // Number of positions the engine examined.
   nodes: number;
 
-  // Positions examined per second.
   nodesPerSecond: number;
 
-  // Time spent analyzing in milliseconds.
   timeMs: number;
 }
 
-// A single line from MultiPV analysis. When we ask the engine
-// for the top 3-5 moves, each line is one of these.
 export interface PVLine {
-  // Rank: 1 = best move, 2 = second best, etc.
   rank: number;
 
-  // The evaluation of this specific line.
   score: {
-    centipawns?: number;  // Centipawn score (from White's perspective)
-    mate?: number;        // Mate-in-N (from side to move's perspective)
+    centipawns?: number; 
+    mate?: number;        
   };
 
-  // Win/Draw/Loss for this line
   wdl?: {
-    win: number;    // 0-1000
-    draw: number;   // 0-1000
-    loss: number;   // 0-1000
+    win: number;
+    draw: number;  
+    loss: number;   
   };
 
-  // The sequence of moves in this variation (UCI notation).
   moves: string[];
 
-  // Search depth for this line.
   depth: number;
 }
-
-// Complete multi-PV analysis result — contains all lines.
 export interface MultiPVAnalysis {
   lines: PVLine[];
   depth: number;
   totalNodes: number;
   timeMs: number;
 }
-
-
-// ============================================================
-// TACTICAL MOTIFS
-// ============================================================
-// Chess tactical patterns that we detect in positions. These
-// enrich the coaching analysis — instead of just saying "good
-// move," we can say "this knight fork wins the exchange."
-// ============================================================
 
 export enum TacticalMotif {
   FORK              = "fork",
@@ -425,108 +331,71 @@ export const TACTICAL_MOTIF_DISPLAY: Record<TacticalMotif, {
 };
 
 
-// ============================================================
-// ANALYSIS RESULT
-// ============================================================
-// The complete analysis output for a single move. This is the
-// main data structure that flows from the analysis pipeline to
-// the UI. It contains everything needed to display the move
-// classification badge, the evaluation, and the full coaching
-// explanation text.
-// ============================================================
 
 export interface AnalysisResult {
-  // === Classification ===
   classification: MoveClassification;
   centipawnLoss: number;
 
-  // === Engine Data ===
-  evalBefore: EngineEvaluation;   // Evaluation BEFORE the move
-  evalAfter: EngineEvaluation;    // Evaluation AFTER the move
-  bestMove: string;               // What should have been played (UCI)
-  bestMoveSan: string;            // What should have been played (SAN)
-  playedMove: string;             // What was actually played (UCI)
-  playedMoveSan: string;          // What was actually played (SAN)
+  evalBefore: EngineEvaluation;   
+  evalAfter: EngineEvaluation;    
+  bestMove: string;              
+  bestMoveSan: string;            
+  playedMove: string;           
+  playedMoveSan: string;
 
-  // === Multi-PV Data ===
-  topMoves: PVLine[];             // Top 3-5 moves in the position
+  topMoves: PVLine[];            
 
-  // === Natural Language Analysis (6 layers) ===
   layers: {
-    descriptive: string;    // Layer 1: What the move does
-    evaluative: string;     // Layer 2: Why it's good or bad
-    consequential: string;  // Layer 3: What happens next
-    corrective: string;     // Layer 4: What you should have played
-    strategic: string;      // Layer 5: Big picture context
-    coachingTip: string;    // Layer 6: Actionable advice
+    descriptive: string;   
+    evaluative: string;    
+    consequential: string; 
+    corrective: string;     
+    strategic: string;      
+    coachingTip: string;  
   };
 
-  // === Contextual Data ===
   isBookMove: boolean;
   openingName: string | null;
   openingEco: string | null;
   tacticalMotifs: TacticalMotif[];
   gamePhase: GamePhase;
-  threats: string[];              // Threats in the position after the move
+  threats: string[];             
 
-  // === Timing ===
-  analysisTimeMs: number;         // How long the analysis took
+  analysisTimeMs: number;      
 }
 
 
-// ============================================================
-// MOVE RECORD
-// ============================================================
-// Everything we store about a single move in the game. The
-// move list is an array of these. Each move links to its
-// analysis result (which may be null while analysis is still
-// running — it gets filled in asynchronously).
-// ============================================================
 
 export interface MoveRecord {
-  // Move identification
-  moveNumber: number;             // 1, 2, 3, ... (full moves)
-  color: PlayerColor;             // Which side made this move
-  san: string;                    // Standard algebraic notation ("Nf3", "exd5")
-  uci: string;                    // UCI notation ("g1f3", "e4d5")
+  moveNumber: number;           
+  color: PlayerColor;          
+  san: string;                   
+  uci: string;                    
 
-  // Position snapshots
-  fenBefore: string;              // FEN string BEFORE the move
-  fenAfter: string;               // FEN string AFTER the move
+  fenBefore: string;            
+  fenAfter: string;            
 
-  // Analysis (null until analysis completes)
   analysis: AnalysisResult | null;
 
-  // Whether analysis is currently in progress for this move
   isAnalyzing: boolean;
 
-  // Timestamp when the move was made
   timestamp: number;
 }
 
 
-// ============================================================
-// BOT LEVEL CONFIGURATION
-// ============================================================
-// Each difficulty level maps to specific Stockfish parameters
-// that control how strong (or weak) the engine plays. We
-// define 20 levels from absolute beginner to full strength.
-// ============================================================
+
 
 export interface BotLevel {
-  level: number;          // 1-20
-  name: string;           // Display name ("Beginner", "Club Player", etc.)
-  elo: number;            // Approximate Elo rating
-  description: string;    // What kind of player this simulates
-  skillLevel: number;     // Stockfish Skill Level parameter (0-20)
-  depth: number;          // Maximum search depth
-  thinkTimeMs: number;    // How long the bot "thinks" (ms)
-  randomness: number;     // 0-1, probability of picking a non-top move
+  level: number;         
+  name: string;          
+  elo: number;           
+  description: string;   
+  skillLevel: number;    
+  depth: number;         
+  thinkTimeMs: number;   
+  randomness: number;     
 }
 
-// All 20 bot levels — pre-configured and ready to use.
-// These are carefully calibrated to feel like real human
-// opponents at each rating band.
 export const BOT_LEVELS: BotLevel[] = [
   {
     level: 1, name: "Absolute Beginner", elo: 400,
@@ -631,55 +500,34 @@ export const BOT_LEVELS: BotLevel[] = [
 ];
 
 
-// ============================================================
-// GAME STATE
-// ============================================================
-// The complete state of a game in progress. This is the main
-// data structure managed by the game store (Zustand). It
-// contains everything: the current position, all moves played,
-// analysis for each move, player settings, and game metadata.
-// ============================================================
-
 export interface GameState {
-  // Unique identifier for this game
   id: string;
 
-  // Current board position as a FEN string
   fen: string;
 
-  // Complete move history with analysis
   moves: MoveRecord[];
 
-  // Player configuration
   playerColor: PlayerColor;
   botLevel: BotLevel;
   coachingLevel: CoachingLevel;
 
-  // Game status
   gamePhase: GamePhase;
   isGameOver: boolean;
   isPlayerTurn: boolean;
   result: GameResult | null;
 
-  // Timing
   startTime: number;
 
-  // For navigating through move history (used in review mode)
   currentMoveIndex: number;
 
-  // Opening tracking
   currentOpening: string | null;
   currentEco: string | null;
   isInBook: boolean;
 
-  // Evaluation history (for the win probability graph)
   evalHistory: EvalHistoryEntry[];
 }
 
 
-// ============================================================
-// GAME RESULT
-// ============================================================
 
 export interface GameResult {
   winner: PlayerColor | "draw";
@@ -700,46 +548,27 @@ export enum GameEndReason {
 }
 
 
-// ============================================================
-// EVALUATION HISTORY
-// ============================================================
-// One entry per move in the evaluation graph. Tracks how the
-// evaluation and win probability changed over the game.
-// ============================================================
-
 export interface EvalHistoryEntry {
   moveNumber: number;
   color: PlayerColor;
   san: string;
-  evaluation: number;           // Centipawns from White's perspective
-  winProbability: number;       // 0-100, from White's perspective
+  evaluation: number;      
+  winProbability: number;   
   classification: MoveClassification;
 }
 
 
-// ============================================================
-// OPENING INFO
-// ============================================================
-// Information about a chess opening for display and coaching.
-// ============================================================
-
 export interface OpeningInfo {
-  name: string;                 // "Sicilian Defense: Najdorf Variation"
-  eco: string;                  // "B90"
-  moves: string;                // "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6"
-  description: string;          // Brief description of the opening's character
-  whitePlan: string;            // Typical plans for White
-  blackPlan: string;            // Typical plans for Black
-  keyThemes: string[];          // ["Kingside attack", "Queenside counterplay"]
+  name: string;               
+  eco: string;                
+  moves: string;               
+  description: string;          
+  whitePlan: string;           
+  blackPlan: string;           
+  keyThemes: string[];         
 }
 
 
-// ============================================================
-// ENGINE COMMUNICATION TYPES
-// ============================================================
-// Types used for communication between our code and the
-// Stockfish engine running as a Web Worker.
-// ============================================================
 
 export interface EngineCommand {
   type: "uci" | "isready" | "position" | "go" | "stop" | "quit" | "setoption";
@@ -782,21 +611,15 @@ export interface EngineInfoLine {
 }
 
 
-// ============================================================
-// UI STATE TYPES
-// ============================================================
-// Types specific to the user interface state management.
-// ============================================================
-
 export interface BoardHighlight {
-  square: string;               // e.g., "e4"
-  color: string;                // CSS color string
+  square: string;                
+  color: string;               
 }
 
 export interface BoardArrow {
-  from: string;                 // e.g., "e2"
-  to: string;                   // e.g., "e4"
-  color: string;                // "green" for best move, "red" for threat
+  from: string;                 
+  to: string;                  
+  color: string;              
 }
 
 export interface AppSettings {
@@ -807,12 +630,11 @@ export interface AppSettings {
   showAnalysis: boolean;
   showArrows: boolean;
   showHints: boolean;
-  autoAnalysis: boolean;        // Analyze moves automatically
+  autoAnalysis: boolean;      
   soundEnabled: boolean;
   animationSpeed: "slow" | "normal" | "fast";
 }
 
-// Default settings for new users
 export const DEFAULT_SETTINGS: AppSettings = {
   coachingLevel: CoachingLevel.INTERMEDIATE,
   boardTheme: "default",

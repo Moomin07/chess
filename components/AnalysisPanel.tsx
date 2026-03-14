@@ -1,6 +1,4 @@
-// ============================================================
-// ChessMind Coach — Minimalist Analysis Panel
-// ============================================================
+//minimal panel
 
 "use client";
 
@@ -66,7 +64,6 @@ export default function AnalysisPanel({
 
   return (
     <div className={`p-4 space-y-3 ${className}`}>
-      {/* ── Header ── */}
       <div className="flex items-center gap-3 pb-4 border-b border-white/5">
         <ClassificationBadge classification={analysis.classification} size="lg" showLabel={false} />
         <div className="flex flex-col">
@@ -83,7 +80,6 @@ export default function AnalysisPanel({
         )}
       </div>
 
-      {/* ── Accordion Sections ── */}
       <div className="space-y-2">
         {sections.map((section) => {
           if (section.hidden) return null;
@@ -112,7 +108,6 @@ export default function AnalysisPanel({
         })}
       </div>
 
-      {/* ── Metadata ── */}
       <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-600 pt-2 mt-4">
         <span>Depth: {analysis.evalAfter.depth} • Nodes: {(analysis.evalAfter.nodes / 1000).toFixed(0)}k</span>
         <span>{analysis.analysisTimeMs.toFixed(0)}ms</span>

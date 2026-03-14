@@ -1,18 +1,4 @@
-// ============================================================
-// ChessMind Coach — Classification Badge Component
-// ============================================================
-//
-// This component displays the colored badge next to each move
-// in the move list. It shows the classification symbol and
-// label for each move — Brilliant (!!), Blunder (??), etc.
-//
-// It comes in two sizes:
-//   - "sm" (small): Just the symbol, used in the move list
-//   - "lg" (large): Symbol + label, used in the analysis panel
-//
-// The badge animates in with a pop effect when it first appears.
-//
-// ============================================================
+
 
 "use client";
 
@@ -23,31 +9,22 @@ import {
 } from "@/lib/types";
 
 
-// ============================================================
-// PROPS
-// ============================================================
+
 
 interface ClassificationBadgeProps {
-  /** The move classification to display */
   classification: MoveClassification;
 
-  /** Size variant: "sm" for move list, "lg" for analysis panel */
   size?: "sm" | "lg";
 
-  /** Whether to animate the badge appearing */
   animate?: boolean;
 
-  /** Whether to show the text label alongside the symbol */
   showLabel?: boolean;
 
-  /** Optional additional CSS classes */
   className?: string;
 }
 
 
-// ============================================================
-// COMPONENT
-// ============================================================
+
 
 export default function ClassificationBadge({
   classification,
@@ -56,14 +33,12 @@ export default function ClassificationBadge({
   showLabel = false,
   className = "",
 }: ClassificationBadgeProps) {
-  // Get display properties for this classification
   const display = CLASSIFICATION_DISPLAY[classification];
 
   if (!display) {
-    return null; // Unknown classification — render nothing
+    return null; 
   }
 
-  // ── Size-dependent styles ──
   const sizeStyles = {
     sm: {
       container: "px-1.5 py-0.5 text-xs rounded",
@@ -91,12 +66,10 @@ export default function ClassificationBadge({
       `}
       title={display.description}
     >
-      {/* Classification Symbol */}
       <span className={styles.symbol}>
         {display.symbol}
       </span>
 
-      {/* Optional Text Label */}
       {(showLabel || size === "lg") && (
         <span className={styles.label}>
           {display.label}
@@ -106,13 +79,6 @@ export default function ClassificationBadge({
   );
 }
 
-
-// ============================================================
-// CLASSIFICATION ICON COMPONENT
-// ============================================================
-// A simpler version that shows just a colored dot with the
-// symbol — used for very compact displays.
-// ============================================================
 
 export function ClassificationDot({
   classification,
@@ -140,13 +106,6 @@ export function ClassificationDot({
 }
 
 
-// ============================================================
-// CLASSIFICATION SUMMARY
-// ============================================================
-// Shows a summary of all classifications in a game.
-// Used in the post-game review screen.
-// ============================================================
-
 export function ClassificationSummary({
   counts,
   className = "",
@@ -154,7 +113,6 @@ export function ClassificationSummary({
   counts: Record<MoveClassification, number>;
   className?: string;
 }) {
-  // Only show classifications that occurred at least once
   const displayOrder: MoveClassification[] = [
     MoveClassification.BRILLIANT,
     MoveClassification.GREAT,

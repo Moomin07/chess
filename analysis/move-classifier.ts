@@ -1,21 +1,4 @@
-// ============================================================
-// ChessMind Coach — Move Classifier (FIXED)
-// ============================================================
-//
-// KEY FIX: Centipawn loss is calculated by comparing the
-// played move's score against the best move's score from
-// the SAME MultiPV search (same depth, same position).
-//
-// This avoids the bug where depth differences between
-// pre-move and post-move analysis give incorrect cp loss.
-//
-// How Chess.com/Lichess do it:
-//   1. Analyze position with MultiPV 3-5
-//   2. Find the played move in the PV lines
-//   3. CP loss = best line score - played move's line score
-//   4. If played move isn't in the lines, use post-move eval
-//
-// ============================================================
+//madyfiaction
 
 import {
   MoveClassification,
@@ -30,10 +13,6 @@ import {
 } from "@/engine/uci-parser";
 
 
-// ============================================================
-// THRESHOLDS
-// ============================================================
-
 const THRESHOLDS = {
   EXCELLENT_MAX: 10,
   GOOD_MAX: 30,
@@ -44,11 +23,6 @@ const THRESHOLDS = {
   MISS_THRESHOLD: 100,
   GREAT_GAP: 50,
 } as const;
-
-
-// ============================================================
-// TYPES
-// ============================================================
 
 export interface ClassificationInput {
   playedMoveUci: string;
@@ -76,10 +50,6 @@ export interface ClassificationResult {
   reason: string;
 }
 
-
-// ============================================================
-// MAIN CLASSIFIER — FIXED VERSION
-// ============================================================
 
 export function classifyMove(input: ClassificationInput): ClassificationResult {
   const {
@@ -116,14 +86,9 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
   const bestMoveUci = bestLine.moves[0] || playedMoveUci;
   const isWhite = colorToMove === "white";
 
-  // ═══════════════════════════════════════════════════
-  // KEY FIX: Check if the played move matches any PV line
-  // and calculate cp loss from the SAME search
-  // ═══════════════════════════════════════════════════
-
   const isEngineBestMove = playedMoveUci === bestMoveUci;
 
-  // Try to find the played move in the MultiPV lines
+
   const playedMoveLineIndex = preMoveLines.findIndex(
     (line) => line.moves[0] === playedMoveUci
   );
@@ -133,19 +98,16 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
   const bestMoveScore = getEffectiveScore(bestLine);
 
   if (isEngineBestMove) {
-    // Player played the BEST move — centipawn loss is ALWAYS 0
+
     centipawnLoss = 0;
     playedMoveScore = bestMoveScore;
     console.log("[Classifier] Played move matches engine best — cp loss = 0");
   } else if (playedMoveLineIndex >= 0) {
-    // Player's move is in the MultiPV lines — compare within same search
     const playedLine = preMoveLines[playedMoveLineIndex];
     playedMoveScore = getEffectiveScore(playedLine);
     centipawnLoss = Math.max(0, bestMoveScore - playedMoveScore);
     console.log(`[Classifier] Played move found in PV${playedMoveLineIndex + 1} — cp loss = ${centipawnLoss}`);
   } else {
-    // Player's move is NOT in any PV line — use post-move evaluation
-    // This means the move was worse than all top 3-5 candidates
     const playedEvalFromMover = getPlayedEvalFromMoverPerspective(
       postMoveEvalCp, postMoveMate, isWhite
     );
@@ -163,22 +125,17 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     playedMoveScore = bestMoveScore - centipawnLoss;
     console.log(`[Classifier] Played move NOT in PV lines — using post-move eval — cp loss = ${centipawnLoss}`);
   }
-
-  // Normalize evaluations to White's perspective for display
   const bestMoveEvalWhite = getEvalFromWhitePerspective(bestLine, isWhite);
   const playedMoveEvalWhite = isEngineBestMove
     ? bestMoveEvalWhite
     : bestMoveEvalWhite - (isWhite ? centipawnLoss : -centipawnLoss);
 
-  // Check for missed mate
+
   const missedMateIn = checkMissedMate(bestLine, postMoveMate, isEngineBestMove);
 
-  // Check for missed opportunity
   const isMissedOpportunity = checkMissedOpportunity(
     bestLine, secondBestLine, centipawnLoss, isEngineBestMove
   );
-
-  // Build base result
   const baseResult = {
     centipawnLoss,
     bestMoveUci,
@@ -189,11 +146,7 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
   };
 
 
-  // ═══════════════════════════════════════
-  // CLASSIFICATION CHAIN
-  // ═══════════════════════════════════════
 
-  // 1. FORCED
   if (legalMoveCount === 1) {
     return {
       ...baseResult,
@@ -202,7 +155,7 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 2. BOOK
+
   if (isBookMove) {
     return {
       ...baseResult,
@@ -211,7 +164,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 3. If player played the best move, check for Brilliant/Great/Best
   if (isEngineBestMove || centipawnLoss === 0) {
     // Check BRILLIANT
     const brilliantCheck = checkBrilliant(
@@ -226,7 +178,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
       };
     }
 
-    // Check GREAT
     const greatCheck = checkGreat(
       bestLine, secondBestLine, isCapture, isCheck, gamePhase
     );
@@ -238,7 +189,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
       };
     }
 
-    // It's BEST
     return {
       ...baseResult,
       classification: MoveClassification.BEST,
@@ -246,7 +196,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 4. BLUNDER
   if (centipawnLoss > THRESHOLDS.BLUNDER_MIN) {
     const allowsMate = postMoveMate !== null && postMoveMate < 0;
     return {
@@ -258,7 +207,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // Also blunder if allows new mate
   if (
     postMoveMate !== null && postMoveMate < 0 &&
     (bestLine.score.mate == null || bestLine.score.mate > 0)
@@ -270,7 +218,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 5. MISS
   if (isMissedOpportunity && centipawnLoss >= THRESHOLDS.MISS_THRESHOLD) {
     return {
       ...baseResult,
@@ -281,7 +228,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 6. MISTAKE
   if (centipawnLoss > THRESHOLDS.INACCURACY_MAX) {
     return {
       ...baseResult,
@@ -290,7 +236,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 7. INACCURACY
   if (centipawnLoss > THRESHOLDS.GOOD_MAX) {
     return {
       ...baseResult,
@@ -299,7 +244,7 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 8. EXCELLENT
+
   if (centipawnLoss <= THRESHOLDS.EXCELLENT_MAX) {
     return {
       ...baseResult,
@@ -308,7 +253,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
     };
   }
 
-  // 9. GOOD
   return {
     ...baseResult,
     classification: MoveClassification.GOOD,
@@ -316,10 +260,6 @@ export function classifyMove(input: ClassificationInput): ClassificationResult {
   };
 }
 
-
-// ============================================================
-// BRILLIANT DETECTION
-// ============================================================
 
 function checkBrilliant(
   bestLine: PVLine,
@@ -331,7 +271,6 @@ function checkBrilliant(
   gamePhase: GamePhase
 ): { isBrilliant: boolean; reason: string } {
 
-  // Criterion A: Material sacrifice
   if (isSacrifice && materialDelta < -100 && bestLine.moves.length >= 4) {
     return {
       isBrilliant: true,
@@ -339,7 +278,6 @@ function checkBrilliant(
     };
   }
 
-  // Criterion B: Only good move — huge gap to second best
   if (secondBestLine) {
     const gap = getEffectiveScore(bestLine) - getEffectiveScore(secondBestLine);
     if (gap >= THRESHOLDS.BRILLIANT_EVAL_GAP && gamePhase !== GamePhase.OPENING && allLines.length >= 3) {
@@ -350,7 +288,6 @@ function checkBrilliant(
     }
   }
 
-  // Criterion C: Deep forcing sequence
   if (bestLine.moves.length >= 6 && bestLine.depth >= 12) {
     const score = getEffectiveScore(bestLine);
     if ((score >= 300 || bestLine.score.mate != null) && !isSimpleRecapture(bestLine)) {
@@ -365,9 +302,6 @@ function checkBrilliant(
 }
 
 
-// ============================================================
-// GREAT DETECTION
-// ============================================================
 
 function checkGreat(
   bestLine: PVLine,
@@ -391,9 +325,6 @@ function checkGreat(
 }
 
 
-// ============================================================
-// MISSED OPPORTUNITY DETECTION
-// ============================================================
 
 function checkMissedOpportunity(
   bestLine: PVLine,
@@ -425,10 +356,6 @@ function checkMissedMate(
   return null;
 }
 
-
-// ============================================================
-// HELPERS
-// ============================================================
 
 function getEffectiveScore(line: PVLine): number {
   if (line.score.mate != null) {
@@ -470,10 +397,6 @@ function isSimpleRecapture(line: PVLine): boolean {
   return count >= 2;
 }
 
-
-// ============================================================
-// GAME PHASE DETECTION
-// ============================================================
 
 export function detectGamePhase(fen: string, moveNumber: number): GamePhase {
   const piecePart = fen.split(" ")[0];

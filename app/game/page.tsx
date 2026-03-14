@@ -1,7 +1,4 @@
-// ============================================================
-// ChessMind Coach — Minimalist Game Page 
-// ============================================================
-
+//pageeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
@@ -17,10 +14,6 @@ import ChessBoard from "@/components/ChessBoard";
 import EvaluationBar, { EvaluationBarHorizontal } from "@/components/EvaluationBar";
 import MoveList from "@/components/MoveList";
 import AnalysisPanel from "@/components/AnalysisPanel";
-
-// ============================================================
-// HELPERS FOR MATERIAL ADVANTAGE
-// ============================================================
 
 const PIECE_SYMBOLS: Record<string, string> = {
   p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", // Black pieces
@@ -62,10 +55,6 @@ function getMaterialState(fen: string) {
   };
 }
 
-// ============================================================
-// MAIN PAGE
-// ============================================================
-
 export default function GamePage() {
   const isGameActive = useGameStore((s) => s.isGameActive);
   return (
@@ -75,9 +64,6 @@ export default function GamePage() {
   );
 }
 
-// ============================================================
-// SETUP VIEW (Clean & Flat with Checkerboard BG)
-// ============================================================
 
 function SetupView() {
   const [selectedColor, setSelectedColor] = useState<PlayerColor>("white");
@@ -101,7 +87,6 @@ function SetupView() {
   };
 
   return (
-    // FIXED: Added checkerboard-bg class strictly to this container
     <div className="flex-1 flex items-center justify-center p-4 checkerboard-bg">
       <div className="w-full max-w-md surface-panel p-6 sm:p-8">
         
@@ -181,9 +166,6 @@ function SetupView() {
   );
 }
 
-// ============================================================
-// GAME VIEW (Split Screen Fixed Layout)
-// ============================================================
 
 function GameView() {
   const fen = useGameStore((s) => s.fen);
@@ -270,10 +252,8 @@ function GameView() {
         </div>
       </div>
 
-      {/* ── Main Split Container ── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10 p-2 lg:p-6 gap-4 lg:gap-6 justify-center">
         
-        {/* ── LEFT SIDE: Evaluation Bar + Board ── */}
         <div className="shrink-0 flex flex-row items-start justify-center relative z-20 w-full lg:w-auto lg:overflow-y-auto lg:pb-8">
           
           <div className="hidden lg:flex shrink-0 mr-4 py-[28px]">
@@ -290,7 +270,6 @@ function GameView() {
 
           <div className="flex flex-col w-full max-w-[480px] lg:max-w-[min(480px,calc(100vh-220px))]">
             
-            {/* Top Player (Opponent) */}
             <div className="flex justify-between items-end mb-1 px-1 h-7">
               <div className="flex items-center gap-2">
                 <div className="bg-[#1f1e1b] rounded text-xs px-1.5 py-0.5 font-bold text-zinc-400">Bot</div>
@@ -299,7 +278,7 @@ function GameView() {
               </div>
             </div>
             
-            {/* Top Player Material */}
+   
             <div className="flex items-center px-1 mb-2 h-5">
               <div className="flex text-lg leading-none tracking-tight text-zinc-400">
                 {topCaptured.map((p, i) => <span key={i}>{PIECE_SYMBOLS[p]}</span>)}
@@ -309,7 +288,6 @@ function GameView() {
               )}
             </div>
 
-            {/* Mobile Eval Bar */}
             <div className="lg:hidden mb-2">
                <EvaluationBarHorizontal
                   centipawns={latestEval.cp}
@@ -320,7 +298,7 @@ function GameView() {
                 />
             </div>
 
-            {/* The Board */}
+           
             <div className="rounded overflow-hidden w-full">
               <ChessBoard
                 fen={displayFen}
@@ -332,7 +310,7 @@ function GameView() {
               />
             </div>
 
-            {/* Bottom Player Material */}
+            
             <div className="flex items-center px-1 mt-2 h-5">
               <div className="flex text-lg leading-none tracking-tight text-zinc-400">
                 {bottomCaptured.map((p, i) => <span key={i}>{PIECE_SYMBOLS[p]}</span>)}
@@ -342,7 +320,7 @@ function GameView() {
               )}
             </div>
 
-            {/* Bottom Player (You) */}
+           
             <div className="flex justify-between items-start mt-1 px-1 h-7">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-white">{bottomPlayerName}</span>
@@ -352,7 +330,6 @@ function GameView() {
               </span>
             </div>
 
-            {/* Controls */}
             <div className="flex items-center justify-center gap-1 mt-2">
               <NavButton onClick={goToStart} label="⏮" />
               <NavButton onClick={goBack} label="◀" />
@@ -364,10 +341,10 @@ function GameView() {
           </div>
         </div>
 
-        {/* ── RIGHT SIDE: Analysis & Hints (SCROLLABLE ZONE) ── */}
+    
         <div className="flex-1 overflow-y-auto w-full lg:max-w-[400px] scroll-smooth z-10 flex flex-col gap-4 pb-10">
           
-          {/* Hint Area */}
+      
           {isPlayerTurn && !isGameOver && !isAnalyzing && (
             <div className="surface-panel p-4 shrink-0">
               {currentHint ? (
@@ -394,7 +371,7 @@ function GameView() {
             </div>
           )}
 
-          {/* Move List */}
+      
           <div className="surface-panel overflow-hidden flex flex-col max-h-[250px] shrink-0">
             <div className="bg-[#1f1e1b] px-3 py-2 border-b border-[#312e2b]">
               <span className="text-xs font-bold text-zinc-400 uppercase">Moves</span>
@@ -407,7 +384,6 @@ function GameView() {
             />
           </div>
 
-          {/* Analysis Panel */}
           <div className="surface-panel overflow-hidden flex-1 flex flex-col">
             <div className="bg-[#1f1e1b] px-3 py-2 border-b border-[#312e2b]">
               <span className="text-xs font-bold text-zinc-400 uppercase">Analysis</span>
@@ -424,15 +400,11 @@ function GameView() {
         </div>
       </div>
 
-      {/* Game Over Modal */}
       {isGameOver && result && <GameOverOverlay result={result} onNewGame={reset} />}
     </div>
   );
 }
 
-// ============================================================
-// COMPACT NAVIGATION BUTTON
-// ============================================================
 
 function NavButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -445,9 +417,6 @@ function NavButton({ onClick, label }: { onClick: () => void; label: string }) {
   );
 }
 
-// ============================================================
-// GAME OVER OVERLAY
-// ============================================================
 
 function GameOverOverlay({
   result,
